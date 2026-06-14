@@ -1,0 +1,203 @@
+@page "/filing-register"
+@inject IFilingRecordService FilingRecordService
+@inject ICompanyClientService CompanyClientService
+
+<PageTitle>Filing Register</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Filings</p>
+        <h1>Filing Register</h1>
+        <p class="text-muted mb-0">Monitor due dates, SRN, challan, and MCA status across all client filings.</p>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="alert alert-light border">Loading filing register...</div>
+}
+else
+{
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white"><h2 class="h5 mb-0">@(isEditMode ? "Edit Filing Record" : "Select a filing row to update")</h2></div>
+        <div class="card-body">
+            @if (!isEditMode)
+            {
+                <div class="text-muted">Use the Edit button in the register to update SRN, challan, filing date, or MCA status.</div>
+            }
+            else
+            {
+                <EditForm Model="editModel" OnValidSubmit="SaveAsync">
+                    <DataAnnotationsValidator />
+                    <div class="row g-3">
+                        <div class="col-md-2"><label class="form-label">Company</label><InputText class="form-control" Value="@editCompanyName" disabled /></div>
+                        <div class="col-md-2"><label class="form-label">Form</label><InputText class="form-control" Value="@editFormCode" disabled /></div>
+                        <div class="col-md-2"><label class="form-label">FY</label><InputText class="form-control" @bind-Value="editModel.FinancialYear" /></div>
+                        <div class="col-md-2"><label class="form-label">Due Date</label><InputDate class="form-control" @bind-Value="editModel.DueDate" /></div>
+                        <div class="col-md-2"><label class="form-label">Filing Date</label><InputDate class="form-control" @bind-Value="editModel.FilingDate" /></div>
+                        <div class="col-md-2"><label class="form-label">Challan Amount</label><InputNumber class="form-control" @bind-Value="editModel.ChallanAmount" /></div>
+                        <div class="col-md-3"><label class="form-label">SRN</label><InputText class="form-control" @bind-Value="editModel.SRN" /></div>
+                        <div class="col-md-3"><label class="form-label">Challan Number</label><InputText class="form-control" @bind-Value="editModel.ChallanNumber" /></div>
+                        <div class="col-md-3"><label class="form-label">MCA Status</label><InputSelect class="form-select" @bind-Value="editModel.McaStatus">@foreach (var status in FilingRecordStatuses.All){<option value="@status">@status</option>}</InputSelect></div>
+                        <div class="col-md-3"><label class="form-label">Remarks</label><InputText class="form-control" @bind-Value="editModel.Remarks" /></div>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary">Save Filing</button>
+                        <button type="button" class="btn btn-outline-secondary" @onclick="ResetEdit">Cancel</button>
+                    </div>
+                </EditForm>
+            }
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Company</label>
+                    <InputSelect class="form-select" @bind-Value="selectedCompanyId">
+                        <option value="0">All Companies</option>
+                        @foreach (var company in companies)
+                        {
+                            <option value="@company.Id">@company.CompanyName</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-3"><label class="form-label">Form</label><InputText class="form-control" @bind-Value="formFilter" /></div>
+                <div class="col-md-2"><label class="form-label">Financial Year</label><InputText class="form-control" @bind-Value="financialYearFilter" /></div>
+                <div class="col-md-4">
+                    <label class="form-label">Status</label>
+                    <InputSelect class="form-select" @bind-Value="statusFilter">
+                        <option value="">All</option>
+                        @foreach (var status in FilingRecordStatuses.All)
+                        {
+                            <option value="@status">@status</option>
+                        }
+                    </InputSelect>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            @if (FilteredFilings.Count == 0)
+            {
+                <div class="p-4 text-muted">No filing records match the current filters.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr><th>Form</th><th>Company</th><th>FY</th><th>Due Date</th><th>Filing Date</th><th>SRN</th><th>Status</th><th>Delay</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var filing in FilteredFilings)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">@filing.McaFormMaster?.FormCode</div>
+                                        <div class="small text-muted">@filing.McaFormMaster?.FormName</div>
+                                    </td>
+                                    <td>@filing.CompanyClient?.CompanyName</td>
+                                    <td>@filing.FinancialYear</td>
+                                    <td>@(filing.DueDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                                    <td>@(filing.FilingDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                                    <td>@(string.IsNullOrWhiteSpace(filing.SRN) ? "-" : filing.SRN)</td>
+                                    <td><span class="badge @BadgeHelper.GetFilingStatusBadge(filing.McaStatus)">@filing.McaStatus</span></td>
+                                    <td>
+                                        @if (IsDelayed(filing))
+                                        {
+                                            <span class="badge bg-danger-subtle text-danger-emphasis">Overdue</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td class="text-end"><button class="btn btn-sm btn-outline-primary" @onclick="@(() => EditFiling(filing.Id))">Edit</button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private List<FilingRecord> filings = [];
+    private List<CompanyClient> companies = [];
+    private bool isLoading = true;
+    private int selectedCompanyId;
+    private string formFilter = string.Empty;
+    private string financialYearFilter = string.Empty;
+    private string statusFilter = string.Empty;
+    private FilingRecord editModel = new();
+    private bool isEditMode;
+    private string editCompanyName = string.Empty;
+    private string editFormCode = string.Empty;
+
+    private List<FilingRecord> FilteredFilings => filings
+        .Where(x => selectedCompanyId == 0 || x.CompanyClientId == selectedCompanyId)
+        .Where(x => string.IsNullOrWhiteSpace(formFilter) || (x.McaFormMaster?.FormCode?.Contains(formFilter, StringComparison.OrdinalIgnoreCase) ?? false))
+        .Where(x => string.IsNullOrWhiteSpace(financialYearFilter) || (x.FinancialYear?.Contains(financialYearFilter, StringComparison.OrdinalIgnoreCase) ?? false))
+        .Where(x => string.IsNullOrWhiteSpace(statusFilter) || x.McaStatus == statusFilter)
+        .OrderBy(x => x.DueDate)
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        filings = await FilingRecordService.GetAllAsync();
+        companies = await CompanyClientService.GetAllAsync();
+        isLoading = false;
+    }
+
+    private void EditFiling(int id)
+    {
+        var filing = filings.First(x => x.Id == id);
+        editModel = new FilingRecord
+        {
+            Id = filing.Id,
+            FirmId = filing.FirmId,
+            CompanyClientId = filing.CompanyClientId,
+            WorkItemId = filing.WorkItemId,
+            McaFormMasterId = filing.McaFormMasterId,
+            FinancialYear = filing.FinancialYear,
+            DueDate = filing.DueDate,
+            FilingDate = filing.FilingDate,
+            SRN = filing.SRN,
+            ChallanNumber = filing.ChallanNumber,
+            ChallanAmount = filing.ChallanAmount,
+            McaStatus = filing.McaStatus,
+            Remarks = filing.Remarks,
+            AcknowledgementFilePath = filing.AcknowledgementFilePath
+        };
+        editCompanyName = filing.CompanyClient?.CompanyName ?? string.Empty;
+        editFormCode = filing.McaFormMaster?.FormCode ?? string.Empty;
+        isEditMode = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        await FilingRecordService.UpdateAsync(editModel);
+        filings = await FilingRecordService.GetAllAsync();
+        ResetEdit();
+    }
+
+    private void ResetEdit()
+    {
+        editModel = new FilingRecord();
+        editCompanyName = string.Empty;
+        editFormCode = string.Empty;
+        isEditMode = false;
+    }
+
+    private static bool IsDelayed(FilingRecord filing)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        return filing.DueDate.HasValue && filing.DueDate.Value < today && filing.McaStatus is not FilingRecordStatuses.Approved and not FilingRecordStatuses.Filed;
+    }
+}

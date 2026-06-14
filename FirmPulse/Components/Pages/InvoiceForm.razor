@@ -57,18 +57,21 @@ else
                                 <option value="@status">@status</option>
                             }
                         </InputSelect>
+                        <ValidationMessage For="@(() => model.Status)" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Amount</label>
-                        <InputNumber class="form-control" @bind-Value="model.Amount" />
+                        <InputNumber class="form-control" @bind-Value="model.Amount" @bind-Value:after="RecalculateTotal" />
+                        <ValidationMessage For="@(() => model.Amount)" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Tax Amount</label>
-                        <InputNumber class="form-control" @bind-Value="model.TaxAmount" />
+                        <InputNumber class="form-control" @bind-Value="model.TaxAmount" @bind-Value:after="RecalculateTotal" />
+                        <ValidationMessage For="@(() => model.TaxAmount)" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Total Amount</label>
-                        <InputNumber class="form-control" @bind-Value="model.TotalAmount" />
+                        <InputNumber class="form-control" @bind-Value="model.TotalAmount" disabled />
                     </div>
                     <div class="col-md-12">
                         <label class="form-label">Remarks</label>
@@ -114,7 +117,8 @@ else
                 CompanyClientId = companies.FirstOrDefault()?.Id ?? 0,
                 InvoiceDate = DateOnly.FromDateTime(DateTime.Today),
                 DueDate = DateOnly.FromDateTime(DateTime.Today.AddDays(15)),
-                Status = InvoiceStatuses.Draft
+                Status = InvoiceStatuses.Draft,
+                TotalAmount = 0m
             };
         }
 
@@ -124,7 +128,7 @@ else
     private async Task SaveAsync()
     {
         model.FirmId = defaultFirmId;
-        model.TotalAmount = model.Amount + model.TaxAmount;
+        RecalculateTotal();
 
         if (IsEditMode)
         {
@@ -139,4 +143,9 @@ else
     }
 
     private void Cancel() => NavigationManager.NavigateTo("/invoices");
+
+    private void RecalculateTotal()
+    {
+        model.TotalAmount = model.Amount + model.TaxAmount;
+    }
 }

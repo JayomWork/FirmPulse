@@ -1,0 +1,259 @@
+@page "/compliance-templates"
+@inject IComplianceTemplateService ComplianceTemplateService
+@inject IServiceMasterService ServiceMasterService
+@inject FirmPulseDbContext DbContext
+
+<PageTitle>Compliance Templates</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Workflow Design</p>
+        <h1>Compliance Templates</h1>
+        <p class="text-muted mb-0">Build reusable annual and event-based compliance flows for your clients.</p>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="alert alert-light border">Loading templates...</div>
+}
+else
+{
+    <div class="row g-4">
+        <div class="col-xl-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">@(isEditTemplateMode ? "Edit Template" : "Add Template")</h2></div>
+                <div class="card-body">
+                    <EditForm Model="templateModel" OnValidSubmit="SaveTemplateAsync">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="mb-3"><label class="form-label">Template Name</label><InputText class="form-control" @bind-Value="templateModel.TemplateName" /></div>
+                        <div class="mb-3"><label class="form-label">Company Type</label><InputSelect class="form-select" @bind-Value="templateModel.CompanyType">@foreach (var companyType in CompanyClientTypes.All){<option value="@companyType">@companyType</option>}</InputSelect></div>
+                        <div class="mb-3"><label class="form-label">Description</label><InputTextArea class="form-control" @bind-Value="templateModel.Description" /></div>
+                        <div class="form-check mb-2"><InputCheckbox class="form-check-input" @bind-Value="templateModel.FinancialYearBased" /><label class="form-check-label ms-2">Financial Year Based</label></div>
+                        <div class="form-check mb-2"><InputCheckbox class="form-check-input" @bind-Value="templateModel.IsSystemTemplate" /><label class="form-check-label ms-2">System Template</label></div>
+                        <div class="form-check mb-3"><InputCheckbox class="form-check-input" @bind-Value="templateModel.IsActive" /><label class="form-check-label ms-2">Active</label></div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Save Template</button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="ResetTemplateForm">Cancel</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">Add Template Item</h2></div>
+                <div class="card-body">
+                    @if (selectedTemplateId == 0)
+                    {
+                        <div class="text-muted">Select a template first to manage items.</div>
+                    }
+                    else
+                    {
+                        <EditForm Model="itemModel" OnValidSubmit="SaveTemplateItemAsync">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+                            <div class="mb-3"><label class="form-label">Title</label><InputText class="form-control" @bind-Value="itemModel.Title" /></div>
+                            <div class="mb-3"><label class="form-label">Description</label><InputTextArea class="form-control" @bind-Value="itemModel.Description" /></div>
+                            <div class="row g-3">
+                                <div class="col-md-6"><label class="form-label">Sequence</label><InputNumber class="form-control" @bind-Value="itemModel.SequenceNo" /></div>
+                                <div class="col-md-6"><label class="form-label">Offset Days</label><InputNumber class="form-control" @bind-Value="itemModel.DefaultDueOffsetDays" /></div>
+                            </div>
+                            <div class="mb-3 mt-3"><label class="form-label">Service</label><InputSelect class="form-select" @bind-Value="itemModel.ServiceMasterId"><option value="">Select service</option>@foreach (var service in activeServices){<option value="@service.Id">@service.ServiceName</option>}</InputSelect></div>
+                            <div class="mb-3"><label class="form-label">MCA Form</label><InputSelect class="form-select" @bind-Value="itemModel.McaFormMasterId"><option value="">Select MCA form</option>@foreach (var form in mcaForms){<option value="@form.Id">@form.FormCode</option>}</InputSelect></div>
+                            <div class="mb-3"><label class="form-label">Due Date Based On</label><InputSelect class="form-select" @bind-Value="itemModel.DueDateBasedOn">@foreach (var dueType in DueDateBasedOnTypes.All){<option value="@dueType">@dueType</option>}</InputSelect></div>
+                            <div class="mb-3"><label class="form-label">Priority</label><InputSelect class="form-select" @bind-Value="itemModel.Priority">@foreach (var priority in WorkItemPriorities.All){<option value="@priority">@priority</option>}</InputSelect></div>
+                            <div class="form-check mb-2"><InputCheckbox class="form-check-input" @bind-Value="itemModel.RequiresFiling" /><label class="form-check-label ms-2">Requires Filing</label></div>
+                            <div class="form-check mb-2"><InputCheckbox class="form-check-input" @bind-Value="itemModel.RequiresDocuments" /><label class="form-check-label ms-2">Requires Documents</label></div>
+                            <div class="form-check mb-3"><InputCheckbox class="form-check-input" @bind-Value="itemModel.RequiresMeeting" /><label class="form-check-label ms-2">Requires Meeting</label></div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">Save Item</button>
+                                <button type="button" class="btn btn-outline-secondary" @onclick="ResetItemForm">Cancel</button>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">Template Library</h2></div>
+                <div class="card-body">
+                    @foreach (var template in templates)
+                    {
+                        <div class="border rounded-3 p-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h3 class="h6 mb-1">@template.TemplateName</h3>
+                                    <p class="text-muted mb-1">@template.Description</p>
+                                    <div class="small text-muted">@template.CompanyType | @(template.FinancialYearBased ? "FY Based" : "Event / Manual")</div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => SelectTemplate(template.Id))">Items</button>
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="@(() => EditTemplate(template.Id))">Edit</button>
+                                </div>
+                            </div>
+                            @if (selectedTemplateId == template.Id)
+                            {
+                                @if (selectedItems.Count == 0)
+                                {
+                                    <div class="text-muted">No template items added yet.</div>
+                                }
+                                else
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light"><tr><th>#</th><th>Item</th><th>Due Logic</th><th>Workflow Flags</th><th></th></tr></thead>
+                                            <tbody>
+                                                @foreach (var item in selectedItems)
+                                                {
+                                                    <tr>
+                                                        <td>@item.SequenceNo</td>
+                                                        <td>
+                                                            <div class="fw-semibold">@item.Title</div>
+                                                            <div class="small text-muted">@item.ServiceMaster?.ServiceName @(string.IsNullOrWhiteSpace(item.McaFormMaster?.FormCode) ? "" : $"| {item.McaFormMaster.FormCode}")</div>
+                                                        </td>
+                                                        <td>@item.DueDateBasedOn @(item.DefaultDueOffsetDays.HasValue ? $"({item.DefaultDueOffsetDays:+#;-#;0} days)" : "")</td>
+                                                        <td>
+                                                            @if (item.RequiresFiling) { <span class="badge bg-info-subtle text-info-emphasis me-1">Filing</span> }
+                                                            @if (item.RequiresDocuments) { <span class="badge bg-warning-subtle text-warning-emphasis me-1">Documents</span> }
+                                                            @if (item.RequiresMeeting) { <span class="badge bg-primary-subtle text-primary-emphasis">Meeting</span> }
+                                                        </td>
+                                                        <td class="text-end"><button class="btn btn-sm btn-outline-primary" @onclick="@(() => EditItem(item.Id))">Edit</button></td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ComplianceTemplate> templates = [];
+    private List<ComplianceTemplateItem> selectedItems = [];
+    private List<ServiceMaster> activeServices = [];
+    private List<McaFormMaster> mcaForms = [];
+    private ComplianceTemplate templateModel = new() { CompanyType = CompanyClientTypes.PrivateLimited, FinancialYearBased = true, IsActive = true };
+    private ComplianceTemplateItem itemModel = new() { DueDateBasedOn = DueDateBasedOnTypes.Manual, Priority = WorkItemPriorities.Medium, IsActive = true, SequenceNo = 1 };
+    private int selectedTemplateId;
+    private bool isLoading = true;
+    private bool isEditTemplateMode;
+    private bool isEditItemMode;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        templates = await ComplianceTemplateService.GetTemplatesAsync();
+        activeServices = await ServiceMasterService.GetActiveServicesAsync();
+        mcaForms = await DbContext.McaFormMasters.Where(x => x.IsActive).OrderBy(x => x.FormCode).ToListAsync();
+        if (selectedTemplateId != 0)
+        {
+            selectedItems = await ComplianceTemplateService.GetTemplateItemsAsync(selectedTemplateId);
+        }
+        isLoading = false;
+    }
+
+    private async Task SaveTemplateAsync()
+    {
+        if (isEditTemplateMode)
+        {
+            await ComplianceTemplateService.UpdateTemplateAsync(templateModel);
+        }
+        else
+        {
+            var created = await ComplianceTemplateService.CreateTemplateAsync(templateModel);
+            selectedTemplateId = created.Id;
+        }
+
+        ResetTemplateForm();
+        await LoadAsync();
+    }
+
+    private async Task SaveTemplateItemAsync()
+    {
+        itemModel.ComplianceTemplateId = selectedTemplateId;
+        if (isEditItemMode)
+        {
+            await ComplianceTemplateService.UpdateTemplateItemAsync(itemModel);
+        }
+        else
+        {
+            await ComplianceTemplateService.AddTemplateItemAsync(itemModel);
+        }
+
+        ResetItemForm();
+        await LoadAsync();
+    }
+
+    private async Task SelectTemplate(int id)
+    {
+        selectedTemplateId = id;
+        selectedItems = await ComplianceTemplateService.GetTemplateItemsAsync(id);
+        ResetItemForm();
+    }
+
+    private void EditTemplate(int id)
+    {
+        var template = templates.First(x => x.Id == id);
+        templateModel = new ComplianceTemplate
+        {
+            Id = template.Id,
+            FirmId = template.FirmId,
+            TemplateName = template.TemplateName,
+            Description = template.Description,
+            CompanyType = template.CompanyType,
+            FinancialYearBased = template.FinancialYearBased,
+            IsSystemTemplate = template.IsSystemTemplate,
+            IsActive = template.IsActive
+        };
+        isEditTemplateMode = true;
+    }
+
+    private void EditItem(int id)
+    {
+        var item = selectedItems.First(x => x.Id == id);
+        itemModel = new ComplianceTemplateItem
+        {
+            Id = item.Id,
+            ComplianceTemplateId = item.ComplianceTemplateId,
+            ServiceMasterId = item.ServiceMasterId,
+            McaFormMasterId = item.McaFormMasterId,
+            Title = item.Title,
+            Description = item.Description,
+            SequenceNo = item.SequenceNo,
+            DefaultDueOffsetDays = item.DefaultDueOffsetDays,
+            DueDateBasedOn = item.DueDateBasedOn,
+            RequiresFiling = item.RequiresFiling,
+            RequiresDocuments = item.RequiresDocuments,
+            RequiresMeeting = item.RequiresMeeting,
+            Priority = item.Priority,
+            IsActive = item.IsActive
+        };
+        isEditItemMode = true;
+    }
+
+    private void ResetTemplateForm()
+    {
+        templateModel = new ComplianceTemplate { CompanyType = CompanyClientTypes.PrivateLimited, FinancialYearBased = true, IsActive = true };
+        isEditTemplateMode = false;
+    }
+
+    private void ResetItemForm()
+    {
+        itemModel = new ComplianceTemplateItem { DueDateBasedOn = DueDateBasedOnTypes.Manual, Priority = WorkItemPriorities.Medium, IsActive = true, SequenceNo = selectedItems.Count + 1 };
+        isEditItemMode = false;
+    }
+}

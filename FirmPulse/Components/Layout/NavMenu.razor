@@ -1,12 +1,24 @@
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">FirmPulse</a>
+        <a class="navbar-brand" href="">
+            <span class="brand-mark">FP</span>
+            <span>
+                <span class="brand-name">FirmPulse</span>
+                <span class="brand-subtitle">CS Operations</span>
+            </span>
+        </a>
     </div>
 </div>
 
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <div class="sidebar-summary px-3">
+        <div class="sidebar-summary-label">Overview</div>
+        <div class="sidebar-summary-value">Compliance-first workflow</div>
+        <div class="sidebar-summary-text">Manage companies, due dates, and billing from one calm workspace.</div>
+    </div>
+
     <nav class="nav flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
@@ -17,6 +29,42 @@
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="companies">
                 <span class="bi bi-building-fill-nav-menu" aria-hidden="true"></span> Companies
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="services">
+                <span class="bi bi-grid-fill-nav-menu" aria-hidden="true"></span> Services
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="mca-forms">
+                <span class="bi bi-file-earmark-text-fill-nav-menu" aria-hidden="true"></span> MCA Forms
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="compliance-templates">
+                <span class="bi bi-diagram-3-fill-nav-menu" aria-hidden="true"></span> Templates
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="work-register">
+                <span class="bi bi-kanban-fill-nav-menu" aria-hidden="true"></span> Work Register
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="filing-register">
+                <span class="bi bi-journal-check-nav-menu" aria-hidden="true"></span> Filing Register
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="meetings">
+                <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Meetings
             </NavLink>
         </div>
 

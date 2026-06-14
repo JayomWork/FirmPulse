@@ -1,0 +1,176 @@
+@page "/work-register"
+@inject IWorkItemService WorkItemService
+@inject ICompanyClientService CompanyClientService
+
+<PageTitle>Work Register</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Operations</p>
+        <h1>Work Register</h1>
+        <p class="text-muted mb-0">Track all generated and manually created work items from one register.</p>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="alert alert-light border">Loading work register...</div>
+}
+else
+{
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Company</label>
+                    <InputSelect class="form-select" @bind-Value="selectedCompanyId">
+                        <option value="0">All Companies</option>
+                        @foreach (var company in companies)
+                        {
+                            <option value="@company.Id">@company.CompanyName</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Financial Year</label>
+                    <InputText class="form-control" @bind-Value="financialYearFilter" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <InputSelect class="form-select" @bind-Value="statusFilter">
+                        <option value="">All</option>
+                        @foreach (var status in WorkItemStatuses.All)
+                        {
+                            <option value="@status">@status</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Priority</label>
+                    <InputSelect class="form-select" @bind-Value="priorityFilter">
+                        <option value="">All</option>
+                        @foreach (var priority in WorkItemPriorities.All)
+                        {
+                            <option value="@priority">@priority</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Assigned To</label>
+                    <InputText class="form-control" @bind-Value="assignedToFilter" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">From Due Date</label>
+                    <InputDate class="form-control" @bind-Value="fromDueDate" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">To Due Date</label>
+                    <InputDate class="form-control" @bind-Value="toDueDate" />
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="form-check me-3">
+                        <InputCheckbox class="form-check-input" @bind-Value="requiresFilingOnly" />
+                        <label class="form-check-label ms-2">Requires Filing</label>
+                    </div>
+                    <div class="form-check">
+                        <InputCheckbox class="form-check-input" @bind-Value="pendingDocumentsOnly" />
+                        <label class="form-check-label ms-2">Pending Docs</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            @if (FilteredWorkItems.Count == 0)
+            {
+                <div class="p-4 text-muted">No work items match the current filters.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr><th>Work Item</th><th>Company</th><th>Due Date</th><th>Status</th><th>Priority</th><th>Assigned</th><th>Quick Actions</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in FilteredWorkItems)
+                            {
+                                var displayStatus = WorkItemHelper.GetDisplayStatus(item);
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">@item.Title</div>
+                                        <div class="small text-muted">@item.McaFormMaster?.FormCode @(string.IsNullOrWhiteSpace(item.FinancialYear) ? "" : $"| {item.FinancialYear}")</div>
+                                    </td>
+                                    <td>@item.CompanyClient?.CompanyName</td>
+                                    <td>@(item.DueDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                                    <td><span class="badge @BadgeHelper.GetWorkItemStatusBadge(displayStatus)">@displayStatus</span></td>
+                                    <td><span class="badge @BadgeHelper.GetPriorityBadge(item.Priority)">@item.Priority</span></td>
+                                    <td>@item.AssignedTo</td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            <button class="btn btn-sm btn-outline-warning" @onclick="@(() => UpdateStatusAsync(item.Id, WorkItemStatuses.WaitingClient))">Waiting Client</button>
+                                            <button class="btn btn-sm btn-outline-info" @onclick="@(() => UpdateStatusAsync(item.Id, WorkItemStatuses.ReadyForFiling))">Ready</button>
+                                            <button class="btn btn-sm btn-outline-success" @onclick="@(() => UpdateStatusAsync(item.Id, WorkItemStatuses.Filed))">Filed</button>
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="@(() => UpdateStatusAsync(item.Id, WorkItemStatuses.Completed))">Completed</button>
+                                            <a class="btn btn-sm btn-primary" href="/work-items/@item.Id">Open</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private List<WorkItem> workItems = [];
+    private List<CompanyClient> companies = [];
+    private bool isLoading = true;
+    private int selectedCompanyId;
+    private string financialYearFilter = string.Empty;
+    private string statusFilter = string.Empty;
+    private string priorityFilter = string.Empty;
+    private string assignedToFilter = string.Empty;
+    private DateOnly? fromDueDate;
+    private DateOnly? toDueDate;
+    private bool requiresFilingOnly;
+    private bool pendingDocumentsOnly;
+
+    private List<WorkItem> FilteredWorkItems => workItems
+        .Where(x => selectedCompanyId == 0 || x.CompanyClientId == selectedCompanyId)
+        .Where(x => string.IsNullOrWhiteSpace(financialYearFilter) || (x.FinancialYear?.Contains(financialYearFilter, StringComparison.OrdinalIgnoreCase) ?? false))
+        .Where(x => string.IsNullOrWhiteSpace(statusFilter) || WorkItemHelper.GetDisplayStatus(x) == statusFilter || x.Status == statusFilter)
+        .Where(x => string.IsNullOrWhiteSpace(priorityFilter) || x.Priority == priorityFilter)
+        .Where(x => string.IsNullOrWhiteSpace(assignedToFilter) || (x.AssignedTo?.Contains(assignedToFilter, StringComparison.OrdinalIgnoreCase) ?? false))
+        .Where(x => !fromDueDate.HasValue || (x.DueDate.HasValue && x.DueDate.Value >= fromDueDate.Value))
+        .Where(x => !toDueDate.HasValue || (x.DueDate.HasValue && x.DueDate.Value <= toDueDate.Value))
+        .Where(x => !requiresFilingOnly || x.RequiresMcaFiling)
+        .Where(x => !pendingDocumentsOnly || x.ClientDocumentsStatus is WorkItemClientDocumentStatuses.Pending or WorkItemClientDocumentStatuses.PartiallyReceived)
+        .OrderBy(x => x.DueDate)
+        .ThenBy(x => x.CompanyClient?.CompanyName)
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        workItems = await WorkItemService.GetAllAsync();
+        companies = await CompanyClientService.GetAllAsync();
+        isLoading = false;
+    }
+
+    private async Task UpdateStatusAsync(int id, string status)
+    {
+        await WorkItemService.ChangeStatusAsync(id, status, $"Status updated to {status} from register.");
+        await LoadAsync();
+    }
+}

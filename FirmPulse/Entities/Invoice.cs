@@ -23,9 +23,11 @@ public class Invoice
     [DataType(DataType.Date)]
     public DateOnly DueDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
 
+    [Range(typeof(decimal), "0.01", "999999999")]
     [Column(TypeName = "numeric(18,2)")]
     public decimal Amount { get; set; }
 
+    [Range(typeof(decimal), "0", "999999999")]
     [Column(TypeName = "numeric(18,2)")]
     public decimal TaxAmount { get; set; }
 
@@ -38,6 +40,8 @@ public class Invoice
 
     [MaxLength(1000)]
     public string? Remarks { get; set; }
+
+    public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

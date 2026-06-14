@@ -6,6 +6,10 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -16,6 +20,14 @@ builder.Services.AddScoped<ICompanyClientService, CompanyClientService>();
 builder.Services.AddScoped<IComplianceTaskService, ComplianceTaskService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+builder.Services.AddScoped<IServiceMasterService, ServiceMasterService>();
+builder.Services.AddScoped<IComplianceTemplateService, ComplianceTemplateService>();
+builder.Services.AddScoped<ICompanyCompliancePlanService, CompanyCompliancePlanService>();
+builder.Services.AddScoped<IWorkItemService, WorkItemService>();
+builder.Services.AddScoped<IFilingRecordService, FilingRecordService>();
+builder.Services.AddScoped<IWorkItemDocumentService, WorkItemDocumentService>();
+builder.Services.AddScoped<IClientFollowUpService, ClientFollowUpService>();
+builder.Services.AddScoped<ICompanyMeetingService, CompanyMeetingService>();
 
 var app = builder.Build();
 

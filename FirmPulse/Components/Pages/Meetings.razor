@@ -1,0 +1,210 @@
+@page "/meetings"
+@inject ICompanyMeetingService CompanyMeetingService
+@inject ICompanyClientService CompanyClientService
+
+<PageTitle>Meetings</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Meetings</p>
+        <h1>Board / AGM Tracker</h1>
+        <p class="text-muted mb-0">Plan and track board meetings, AGM, EGM, and committee workflows.</p>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="alert alert-light border">Loading meetings...</div>
+}
+else
+{
+    <div class="row g-4">
+        <div class="col-xl-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">@(isEditMode ? "Edit Meeting" : "Add Meeting")</h2></div>
+                <div class="card-body">
+                    <EditForm Model="model" OnValidSubmit="SaveAsync">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="mb-3"><label class="form-label">Company</label><InputSelect class="form-select" @bind-Value="model.CompanyClientId">@foreach (var company in companies){<option value="@company.Id">@company.CompanyName</option>}</InputSelect></div>
+                        <div class="mb-3"><label class="form-label">Meeting Type</label><InputSelect class="form-select" @bind-Value="model.MeetingType">@foreach (var type in CompanyMeetingTypes.All){<option value="@type">@type</option>}</InputSelect></div>
+                        <div class="mb-3"><label class="form-label">Title</label><InputText class="form-control" @bind-Value="model.Title" /></div>
+                        <div class="row g-3">
+                            <div class="col-md-6"><label class="form-label">Meeting Date</label><InputDate class="form-control" @bind-Value="model.MeetingDate" /></div>
+                            <div class="col-md-6"><label class="form-label">Due Date</label><InputDate class="form-control" @bind-Value="model.DueDate" /></div>
+                        </div>
+                        <div class="mb-3 mt-3"><label class="form-label">Venue / Mode</label><InputText class="form-control" @bind-Value="model.VenueOrMode" /></div>
+                        <div class="mb-3"><label class="form-label">Status</label><InputSelect class="form-select" @bind-Value="model.Status">@foreach (var status in CompanyMeetingStatuses.All){<option value="@status">@status</option>}</InputSelect></div>
+                        <div class="form-check mb-2"><InputCheckbox class="form-check-input" @bind-Value="model.NoticePrepared" /><label class="form-check-label ms-2">Notice Prepared</label></div>
+                        <div class="form-check mb-2"><InputCheckbox class="form-check-input" @bind-Value="model.AgendaPrepared" /><label class="form-check-label ms-2">Agenda Prepared</label></div>
+                        <div class="form-check mb-2"><InputCheckbox class="form-check-input" @bind-Value="model.MinutesPrepared" /><label class="form-check-label ms-2">Minutes Prepared</label></div>
+                        <div class="form-check mb-3"><InputCheckbox class="form-check-input" @bind-Value="model.SignedCopyReceived" /><label class="form-check-label ms-2">Signed Copy Received</label></div>
+                        <div class="mb-3"><label class="form-label">Remarks</label><InputTextArea class="form-control" @bind-Value="model.Remarks" /></div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Save Meeting</button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="ResetForm">Cancel</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Company</label>
+                            <InputSelect class="form-select" @bind-Value="selectedCompanyId">
+                                <option value="0">All Companies</option>
+                                @foreach (var company in companies)
+                                {
+                                    <option value="@company.Id">@company.CompanyName</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Meeting Type</label>
+                            <InputSelect class="form-select" @bind-Value="meetingTypeFilter">
+                                <option value="">All Types</option>
+                                @foreach (var type in CompanyMeetingTypes.All)
+                                {
+                                    <option value="@type">@type</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">Meeting Register</h2></div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light"><tr><th>Meeting</th><th>Company</th><th>Date</th><th>Status</th><th>Checklist</th><th></th></tr></thead>
+                            <tbody>
+                                @foreach (var meeting in FilteredMeetings)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">@meeting.Title</div>
+                                            <div class="small text-muted">@meeting.MeetingType</div>
+                                        </td>
+                                        <td>@meeting.CompanyClient?.CompanyName</td>
+                                        <td>@(meeting.MeetingDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                                        <td><span class="badge @BadgeHelper.GetMeetingStatusBadge(meeting.Status)">@meeting.Status</span></td>
+                                        <td class="small">@Checklist(meeting)</td>
+                                        <td class="text-end">
+                                            <div class="d-flex justify-content-end gap-2">
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="@(() => EditMeeting(meeting.Id))">Edit</button>
+                                                <button class="btn btn-sm btn-outline-success" @onclick="@(() => CompleteMeetingAsync(meeting.Id))">Complete</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<CompanyMeeting> meetings = [];
+    private List<CompanyClient> companies = [];
+    private CompanyMeeting model = new() { MeetingType = CompanyMeetingTypes.BoardMeeting, Status = CompanyMeetingStatuses.Planned };
+    private bool isLoading = true;
+    private bool isEditMode;
+    private int defaultFirmId;
+    private int selectedCompanyId;
+    private string meetingTypeFilter = string.Empty;
+
+    private List<CompanyMeeting> FilteredMeetings => meetings
+        .Where(x => selectedCompanyId == 0 || x.CompanyClientId == selectedCompanyId)
+        .Where(x => string.IsNullOrWhiteSpace(meetingTypeFilter) || x.MeetingType == meetingTypeFilter)
+        .OrderBy(x => x.MeetingDate)
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        meetings = await CompanyMeetingService.GetAllAsync();
+        companies = await CompanyClientService.GetAllAsync();
+        defaultFirmId = companies.FirstOrDefault()?.FirmId ?? 0;
+        if (!isEditMode && companies.Count > 0 && model.CompanyClientId == 0)
+        {
+            model.CompanyClientId = companies[0].Id;
+            model.FirmId = companies[0].FirmId;
+        }
+        isLoading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        model.FirmId = companies.First(x => x.Id == model.CompanyClientId).FirmId;
+        if (isEditMode)
+        {
+            await CompanyMeetingService.UpdateAsync(model);
+        }
+        else
+        {
+            await CompanyMeetingService.CreateAsync(model);
+        }
+
+        ResetForm();
+        await LoadAsync();
+    }
+
+    private void EditMeeting(int id)
+    {
+        var meeting = meetings.First(x => x.Id == id);
+        model = new CompanyMeeting
+        {
+            Id = meeting.Id,
+            FirmId = meeting.FirmId,
+            CompanyClientId = meeting.CompanyClientId,
+            CompanyCompliancePlanId = meeting.CompanyCompliancePlanId,
+            MeetingType = meeting.MeetingType,
+            Title = meeting.Title,
+            MeetingDate = meeting.MeetingDate,
+            DueDate = meeting.DueDate,
+            VenueOrMode = meeting.VenueOrMode,
+            NoticePrepared = meeting.NoticePrepared,
+            AgendaPrepared = meeting.AgendaPrepared,
+            MinutesPrepared = meeting.MinutesPrepared,
+            SignedCopyReceived = meeting.SignedCopyReceived,
+            Status = meeting.Status,
+            Remarks = meeting.Remarks
+        };
+        isEditMode = true;
+    }
+
+    private async Task CompleteMeetingAsync(int id)
+    {
+        await CompanyMeetingService.MarkCompletedAsync(id);
+        await LoadAsync();
+    }
+
+    private void ResetForm()
+    {
+        model = new CompanyMeeting
+        {
+            CompanyClientId = companies.FirstOrDefault()?.Id ?? 0,
+            FirmId = defaultFirmId,
+            MeetingType = CompanyMeetingTypes.BoardMeeting,
+            Status = CompanyMeetingStatuses.Planned
+        };
+        isEditMode = false;
+    }
+
+    private static string Checklist(CompanyMeeting meeting) =>
+        $"Notice: {(meeting.NoticePrepared ? "Yes" : "No")}, Agenda: {(meeting.AgendaPrepared ? "Yes" : "No")}, Minutes: {(meeting.MinutesPrepared ? "Yes" : "No")}, Signed: {(meeting.SignedCopyReceived ? "Yes" : "No")}";
+}

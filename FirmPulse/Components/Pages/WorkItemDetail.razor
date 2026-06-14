@@ -1,0 +1,303 @@
+@page "/work-items/{Id:int}"
+@inject IWorkItemService WorkItemService
+@inject IWorkItemDocumentService WorkItemDocumentService
+@inject IFilingRecordService FilingRecordService
+@inject IClientFollowUpService ClientFollowUpService
+
+<PageTitle>Work Item Detail</PageTitle>
+
+@if (isLoading)
+{
+    <div class="alert alert-light border">Loading work item...</div>
+}
+else if (workItem is null)
+{
+    <div class="alert alert-warning">The requested work item could not be found.</div>
+}
+else
+{
+    var displayStatus = WorkItemHelper.GetDisplayStatus(workItem);
+
+    <div class="page-header">
+        <div>
+            <p class="eyebrow">Work Item</p>
+            <h1>@workItem.Title</h1>
+            <p class="text-muted mb-0">@workItem.CompanyClient?.CompanyName | @(workItem.McaFormMaster?.FormCode ?? workItem.ServiceMaster?.ServiceName)</p>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-xl-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">Main Details</h2></div>
+                <div class="card-body">
+                    <dl class="row detail-list mb-0">
+                        <dt class="col-sm-5">Status</dt><dd class="col-sm-7"><span class="badge @BadgeHelper.GetWorkItemStatusBadge(displayStatus)">@displayStatus</span></dd>
+                        <dt class="col-sm-5">Priority</dt><dd class="col-sm-7"><span class="badge @BadgeHelper.GetPriorityBadge(workItem.Priority)">@workItem.Priority</span></dd>
+                        <dt class="col-sm-5">Due Date</dt><dd class="col-sm-7">@FormatDate(workItem.DueDate)</dd>
+                        <dt class="col-sm-5">Assigned To</dt><dd class="col-sm-7">@ValueOrDash(workItem.AssignedTo)</dd>
+                        <dt class="col-sm-5">Financial Year</dt><dd class="col-sm-7">@ValueOrDash(workItem.FinancialYear)</dd>
+                        <dt class="col-sm-5">Documents</dt><dd class="col-sm-7">@workItem.ClientDocumentsStatus</dd>
+                        <dt class="col-sm-5">Filing</dt><dd class="col-sm-7">@workItem.FilingStatus</dd>
+                        <dt class="col-sm-5">Next Action</dt><dd class="col-sm-7">@WorkItemHelper.GetNextBestAction(workItem)</dd>
+                    </dl>
+                    <div class="d-flex flex-wrap gap-2 mt-4">
+                        <button class="btn btn-outline-warning btn-sm" @onclick="@(() => ChangeStatusAsync(WorkItemStatuses.WaitingClient))">Waiting Client</button>
+                        <button class="btn btn-outline-info btn-sm" @onclick="@(() => ChangeStatusAsync(WorkItemStatuses.ReadyForFiling))">Ready For Filing</button>
+                        <button class="btn btn-outline-success btn-sm" @onclick="@(() => ChangeStatusAsync(WorkItemStatuses.Filed))">Filed</button>
+                        <button class="btn btn-primary btn-sm" @onclick="@(() => ChangeStatusAsync(WorkItemStatuses.Completed))">Completed</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">Status History</h2></div>
+                <div class="card-body p-0">
+                    @if (workItem.StatusHistory.Count == 0)
+                    {
+                        <div class="p-4 text-muted">No status history available yet.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table mb-0">
+                                <thead class="table-light"><tr><th>Changed At</th><th>From</th><th>To</th><th>Remarks</th></tr></thead>
+                                <tbody>
+                                    @foreach (var history in workItem.StatusHistory.OrderByDescending(x => x.ChangedAt))
+                                    {
+                                        <tr><td>@history.ChangedAt.ToLocalTime().ToString("dd MMM yyyy hh:mm tt")</td><td>@history.OldStatus</td><td>@history.NewStatus</td><td>@history.Remarks</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">Document Checklist</h2></div>
+                <div class="card-body">
+                    @if (workItem.Documents.Count == 0)
+                    {
+                        <div class="text-muted">No checklist items mapped yet.</div>
+                    }
+                    else
+                    {
+                        @foreach (var document in workItem.Documents.OrderBy(x => x.DocumentName))
+                        {
+                            <div class="border rounded-3 p-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <div class="fw-semibold">@document.DocumentName</div>
+                                        <div class="small text-muted">@(document.IsMandatory ? "Mandatory" : "Optional")</div>
+                                    </div>
+                                    <span class="badge @BadgeHelper.GetWorkItemDocumentBadge(document.Status)">@document.Status</span>
+                                </div>
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-8">
+                                        <InputSelect class="form-select" @bind-Value="documentStatusMap[document.Id]">
+                                            @foreach (var status in WorkItemDocumentStatuses.All)
+                                            {
+                                                <option value="@status">@status</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button class="btn btn-outline-primary w-100" @onclick="@(() => UpdateDocumentStatusAsync(document.Id))">Update</button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">Filing Record</h2></div>
+                <div class="card-body">
+                    @if (workItem.FilingRecords.Count == 0)
+                    {
+                        <div class="text-muted">No filing record linked to this work item.</div>
+                    }
+                    else
+                    {
+                        @foreach (var filing in workItem.FilingRecords)
+                        {
+                            <div class="border rounded-3 p-3 mb-3">
+                                <div class="fw-semibold mb-2">@filing.McaFormMaster?.FormCode</div>
+                                <div class="row g-3">
+                                    <div class="col-md-6"><label class="form-label">SRN</label><InputText class="form-control" @bind-Value="filingData[filing.Id].Srn" /></div>
+                                    <div class="col-md-6"><label class="form-label">Challan Number</label><InputText class="form-control" @bind-Value="filingData[filing.Id].ChallanNumber" /></div>
+                                    <div class="col-md-6"><label class="form-label">Challan Amount</label><InputNumber class="form-control" @bind-Value="filingData[filing.Id].ChallanAmount" /></div>
+                                    <div class="col-md-6"><label class="form-label">Filing Date</label><InputDate class="form-control" @bind-Value="filingData[filing.Id].FilingDate" /></div>
+                                    <div class="col-md-12"><label class="form-label">MCA Status</label><InputSelect class="form-select" @bind-Value="filingData[filing.Id].Status">@foreach (var status in FilingRecordStatuses.All){<option value="@status">@status</option>}</InputSelect></div>
+                                </div>
+                                <button class="btn btn-outline-primary mt-3" @onclick="@(() => UpdateFilingAsync(filing.Id))">Update Filing</button>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">Client Follow-Ups</h2></div>
+                <div class="card-body">
+                    <EditForm Model="followUpModel" OnValidSubmit="AddFollowUpAsync">
+                        <DataAnnotationsValidator />
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-2"><label class="form-label">Type</label><InputSelect class="form-select" @bind-Value="followUpModel.FollowUpType">@foreach (var type in FollowUpTypes.All){<option value="@type">@type</option>}</InputSelect></div>
+                            <div class="col-md-3"><label class="form-label">Subject</label><InputText class="form-control" @bind-Value="followUpModel.Subject" /></div>
+                            <div class="col-md-4"><label class="form-label">Notes</label><InputText class="form-control" @bind-Value="followUpModel.Notes" /></div>
+                            <div class="col-md-2"><label class="form-label">Next Follow-Up</label><InputDate class="form-control" @bind-Value="followUpModel.NextFollowUpDate" /></div>
+                            <div class="col-md-1 d-flex align-items-end"><button class="btn btn-primary w-100" type="submit">Add</button></div>
+                        </div>
+                    </EditForm>
+
+                    @if (workItem.FollowUps.Count == 0)
+                    {
+                        <div class="text-muted">No follow-ups recorded yet.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table mb-0">
+                                <thead class="table-light"><tr><th>Date</th><th>Subject</th><th>Type</th><th>Status</th><th></th></tr></thead>
+                                <tbody>
+                                    @foreach (var followUp in workItem.FollowUps.OrderByDescending(x => x.FollowUpDate))
+                                    {
+                                        <tr>
+                                            <td>@followUp.FollowUpDate.ToString("dd MMM yyyy")</td>
+                                            <td>@followUp.Subject</td>
+                                            <td>@followUp.FollowUpType</td>
+                                            <td><span class="badge @BadgeHelper.GetFollowUpStatusBadge(followUp.Status)">@followUp.Status</span></td>
+                                            <td class="text-end">
+                                                @if (followUp.Status != ClientFollowUpStatuses.Done)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-success" @onclick="@(() => MarkFollowUpDoneAsync(followUp.Id))">Mark Done</button>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private WorkItem? workItem;
+    private bool isLoading = true;
+    private readonly Dictionary<int, string> documentStatusMap = [];
+    private readonly Dictionary<int, FilingEditModel> filingData = [];
+    private ClientFollowUp followUpModel = new() { FollowUpDate = DateOnly.FromDateTime(DateTime.Today), FollowUpType = FollowUpTypes.Call, Status = ClientFollowUpStatuses.Open };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        workItem = await WorkItemService.GetByIdAsync(Id);
+        documentStatusMap.Clear();
+        filingData.Clear();
+        if (workItem is not null)
+        {
+            foreach (var document in workItem.Documents)
+            {
+                documentStatusMap[document.Id] = document.Status;
+            }
+
+            foreach (var filing in workItem.FilingRecords)
+            {
+                filingData[filing.Id] = new FilingEditModel
+                {
+                    Srn = filing.SRN,
+                    ChallanNumber = filing.ChallanNumber,
+                    ChallanAmount = filing.ChallanAmount,
+                    FilingDate = filing.FilingDate,
+                    Status = filing.McaStatus
+                };
+            }
+
+            followUpModel = new ClientFollowUp
+            {
+                FirmId = workItem.FirmId,
+                CompanyClientId = workItem.CompanyClientId,
+                WorkItemId = workItem.Id,
+                FollowUpDate = DateOnly.FromDateTime(DateTime.Today),
+                FollowUpType = FollowUpTypes.Call,
+                Status = ClientFollowUpStatuses.Open
+            };
+        }
+        isLoading = false;
+    }
+
+    private async Task ChangeStatusAsync(string status)
+    {
+        await WorkItemService.ChangeStatusAsync(Id, status, $"Status updated to {status} from detail page.");
+        await LoadAsync();
+    }
+
+    private async Task UpdateDocumentStatusAsync(int documentId)
+    {
+        await WorkItemDocumentService.UpdateStatusAsync(documentId, documentStatusMap[documentId], null);
+        await LoadAsync();
+    }
+
+    private async Task UpdateFilingAsync(int filingId)
+    {
+        var filing = filingData[filingId];
+        await FilingRecordService.UpdateSrnAndChallanAsync(filingId, filing.Srn, filing.ChallanNumber, filing.ChallanAmount, filing.FilingDate, filing.Status, null);
+        await LoadAsync();
+    }
+
+    private async Task AddFollowUpAsync()
+    {
+        if (workItem is null)
+        {
+            return;
+        }
+
+        followUpModel.FirmId = workItem.FirmId;
+        followUpModel.CompanyClientId = workItem.CompanyClientId;
+        followUpModel.WorkItemId = workItem.Id;
+        await ClientFollowUpService.CreateAsync(followUpModel);
+        await LoadAsync();
+    }
+
+    private async Task MarkFollowUpDoneAsync(int id)
+    {
+        await ClientFollowUpService.MarkDoneAsync(id);
+        await LoadAsync();
+    }
+
+    private static string FormatDate(DateOnly? value) => value?.ToString("dd MMM yyyy") ?? "-";
+    private static string ValueOrDash(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
+
+    private sealed class FilingEditModel
+    {
+        public string? Srn { get; set; }
+        public string? ChallanNumber { get; set; }
+        public decimal? ChallanAmount { get; set; }
+        public DateOnly? FilingDate { get; set; }
+        public string Status { get; set; } = FilingRecordStatuses.NotStarted;
+    }
+}

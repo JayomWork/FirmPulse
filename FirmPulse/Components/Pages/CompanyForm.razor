@@ -35,38 +35,85 @@ else
                     <div class="col-md-3">
                         <label class="form-label">CIN / LLPIN</label>
                         <InputText class="form-control" @bind-Value="model.CIN" />
+                        <ValidationMessage For="@(() => model.CIN)" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">PAN</label>
                         <InputText class="form-control" @bind-Value="model.PAN" />
+                        <ValidationMessage For="@(() => model.PAN)" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Incorporation Date</label>
                         <InputDate class="form-control" @bind-Value="model.IncorporationDate" />
+                        <ValidationMessage For="@(() => model.IncorporationDate)" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Company Type</label>
-                        <InputText class="form-control" @bind-Value="model.CompanyType" />
+                        <InputSelect class="form-select" @bind-Value="model.CompanyType">
+                            @foreach (var companyType in CompanyClientTypes.All)
+                            {
+                                <option value="@companyType">@companyType</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => model.CompanyType)" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Status</label>
-                        <InputText class="form-control" @bind-Value="model.Status" />
+                        <InputSelect class="form-select" @bind-Value="model.Status">
+                            @foreach (var status in CompanyClientStatuses.All)
+                            {
+                                <option value="@status">@status</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => model.Status)" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Company Class</label>
+                        <InputText class="form-control" @bind-Value="model.CompanyClass" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">FY End Month</label>
+                        <InputNumber class="form-control" @bind-Value="model.FinancialYearEndMonth" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">FY End Day</label>
+                        <InputNumber class="form-control" @bind-Value="model.FinancialYearEndDay" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Last AGM Date</label>
+                        <InputDate class="form-control" @bind-Value="model.LastAGMDate" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Email</label>
                         <InputText class="form-control" @bind-Value="model.Email" />
+                        <ValidationMessage For="@(() => model.Email)" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Phone</label>
                         <InputText class="form-control" @bind-Value="model.Phone" />
+                        <ValidationMessage For="@(() => model.Phone)" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Contact Person Name</label>
                         <InputText class="form-control" @bind-Value="model.ContactPersonName" />
+                        <ValidationMessage For="@(() => model.ContactPersonName)" />
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check mt-4 pt-2">
+                            <InputCheckbox class="form-check-input" @bind-Value="model.IsListed" />
+                            <label class="form-check-label ms-2">Listed Company</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check mt-4 pt-2">
+                            <InputCheckbox class="form-check-input" @bind-Value="model.HasShareCapital" />
+                            <label class="form-check-label ms-2">Has Share Capital</label>
+                        </div>
                     </div>
                     <div class="col-md-12">
                         <label class="form-label">Registered Office Address</label>
                         <InputTextArea class="form-control" @bind-Value="model.RegisteredOfficeAddress" />
+                        <ValidationMessage For="@(() => model.RegisteredOfficeAddress)" />
                     </div>
                 </div>
 
@@ -103,8 +150,12 @@ else
             model = new CompanyClient
             {
                 FirmId = defaultFirmId,
-                Status = "Active",
-                CompanyType = "Private Limited"
+                Status = CompanyClientStatuses.Active,
+                CompanyType = CompanyClientTypes.PrivateLimited,
+                CompanyClass = "Private Company Limited by Shares",
+                FinancialYearEndMonth = 3,
+                FinancialYearEndDay = 31,
+                HasShareCapital = true
             };
         }
 

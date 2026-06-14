@@ -38,7 +38,13 @@ else
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Compliance Type</label>
-                        <InputText class="form-control" @bind-Value="model.ComplianceType" />
+                        <InputSelect class="form-select" @bind-Value="model.ComplianceType">
+                            @foreach (var complianceType in ComplianceTaskTypes.All)
+                            {
+                                <option value="@complianceType">@complianceType</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => model.ComplianceType)" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Title</label>
@@ -48,6 +54,7 @@ else
                     <div class="col-md-6">
                         <label class="form-label">Assigned To</label>
                         <InputText class="form-control" @bind-Value="model.AssignedTo" />
+                        <ValidationMessage For="@(() => model.AssignedTo)" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Due Date</label>
@@ -61,6 +68,7 @@ else
                                 <option value="@status">@status</option>
                             }
                         </InputSelect>
+                        <ValidationMessage For="@(() => model.Status)" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Priority</label>
@@ -70,6 +78,7 @@ else
                                 <option value="@priority">@priority</option>
                             }
                         </InputSelect>
+                        <ValidationMessage For="@(() => model.Priority)" />
                     </div>
                     <div class="col-md-12">
                         <label class="form-label">Description</label>
@@ -109,7 +118,7 @@ else
 
         if (IsEditMode)
         {
-            model = await DbContext.ComplianceTasks.FirstOrDefaultAsync(x => x.Id == Id!.Value) ?? new ComplianceTask();
+            model = await ComplianceTaskService.GetByIdAsync(Id!.Value) ?? new ComplianceTask();
         }
         else
         {
@@ -117,9 +126,11 @@ else
             {
                 FirmId = defaultFirmId,
                 CompanyClientId = companies.FirstOrDefault()?.Id ?? 0,
+                ComplianceType = ComplianceTaskTypes.AnnualFiling,
                 DueDate = DateOnly.FromDateTime(DateTime.Today.AddDays(7)),
                 Status = ComplianceTaskStatuses.Pending,
-                Priority = ComplianceTaskPriorities.Medium
+                Priority = ComplianceTaskPriorities.Medium,
+                AssignedTo = string.Empty
             };
         }
 

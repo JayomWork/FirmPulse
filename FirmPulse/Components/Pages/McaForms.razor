@@ -1,0 +1,169 @@
+@page "/mca-forms"
+@inject FirmPulseDbContext DbContext
+
+<PageTitle>MCA Forms</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Masters</p>
+        <h1>MCA / ROC Forms</h1>
+        <p class="text-muted mb-0">Maintain form codes, applicability, and due-rule references for filings.</p>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="alert alert-light border">Loading MCA forms...</div>
+}
+else
+{
+    <div class="row g-4">
+        <div class="col-xl-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">@(isEditMode ? "Edit MCA Form" : "Add MCA Form")</h2></div>
+                <div class="card-body">
+                    <EditForm Model="model" OnValidSubmit="SaveAsync">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="mb-3">
+                            <label class="form-label">Form Code</label>
+                            <InputText class="form-control" @bind-Value="model.FormCode" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Form Name</label>
+                            <InputText class="form-control" @bind-Value="model.FormName" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Applicable To</label>
+                            <InputText class="form-control" @bind-Value="model.ApplicableTo" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Default Due Rule</label>
+                            <InputText class="form-control" @bind-Value="model.DefaultDueRule" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <InputTextArea class="form-control" @bind-Value="model.Description" />
+                        </div>
+                        <div class="form-check mb-2">
+                            <InputCheckbox class="form-check-input" @bind-Value="model.IsAnnualForm" />
+                            <label class="form-check-label ms-2">Annual Form</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <InputCheckbox class="form-check-input" @bind-Value="model.IsEventBasedForm" />
+                            <label class="form-check-label ms-2">Event-Based Form</label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <InputCheckbox class="form-check-input" @bind-Value="model.IsActive" />
+                            <label class="form-check-label ms-2">Active</label>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Save Form</button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="ResetForm">Cancel</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">Form Register</h2></div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr><th>Form</th><th>Applicable To</th><th>Default Due Rule</th><th>Type</th><th></th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var form in forms)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">@form.FormCode</div>
+                                            <div class="small text-muted">@form.FormName</div>
+                                        </td>
+                                        <td>@form.ApplicableTo</td>
+                                        <td>@form.DefaultDueRule</td>
+                                        <td>@(form.IsEventBasedForm ? "Event Based" : form.IsAnnualForm ? "Annual" : "General")</td>
+                                        <td class="text-end"><button class="btn btn-sm btn-outline-primary" @onclick="@(() => EditFormRow(form.Id))">Edit</button></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<McaFormMaster> forms = [];
+    private McaFormMaster model = new() { IsActive = true };
+    private bool isLoading = true;
+    private bool isEditMode;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        forms = await DbContext.McaFormMasters.OrderBy(x => x.FormCode).ToListAsync();
+        isLoading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (isEditMode)
+        {
+            var existing = await DbContext.McaFormMasters.FirstAsync(x => x.Id == model.Id);
+            existing.FormCode = model.FormCode;
+            existing.FormName = model.FormName;
+            existing.Description = model.Description;
+            existing.ApplicableTo = model.ApplicableTo;
+            existing.DefaultDueRule = model.DefaultDueRule;
+            existing.IsAnnualForm = model.IsAnnualForm;
+            existing.IsEventBasedForm = model.IsEventBasedForm;
+            existing.IsActive = model.IsActive;
+            existing.UpdatedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            model.CreatedAt = DateTime.UtcNow;
+            model.UpdatedAt = DateTime.UtcNow;
+            DbContext.McaFormMasters.Add(model);
+        }
+
+        await DbContext.SaveChangesAsync();
+        ResetForm();
+        await LoadAsync();
+    }
+
+    private void EditFormRow(int id)
+    {
+        var existing = forms.First(x => x.Id == id);
+        model = new McaFormMaster
+        {
+            Id = existing.Id,
+            FormCode = existing.FormCode,
+            FormName = existing.FormName,
+            Description = existing.Description,
+            ApplicableTo = existing.ApplicableTo,
+            DefaultDueRule = existing.DefaultDueRule,
+            IsAnnualForm = existing.IsAnnualForm,
+            IsEventBasedForm = existing.IsEventBasedForm,
+            IsActive = existing.IsActive
+        };
+        isEditMode = true;
+    }
+
+    private void ResetForm()
+    {
+        model = new McaFormMaster { IsActive = true };
+        isEditMode = false;
+    }
+}

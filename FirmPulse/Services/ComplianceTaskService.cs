@@ -11,16 +11,23 @@ public class ComplianceTaskService(FirmPulseDbContext context) : IComplianceTask
     {
         return await context.ComplianceTasks
             .Include(x => x.CompanyClient)
-            .Where(x => x.CompanyClient != null && x.CompanyClient.IsActive)
+            .Where(x => x.IsActive && x.CompanyClient != null && x.CompanyClient.IsActive)
             .OrderBy(x => x.DueDate)
             .ToListAsync();
+    }
+
+    public async Task<ComplianceTask?> GetByIdAsync(int id)
+    {
+        return await context.ComplianceTasks
+            .Include(x => x.CompanyClient)
+            .FirstOrDefaultAsync(x => x.Id == id && x.IsActive);
     }
 
     public async Task<List<ComplianceTask>> GetByCompanyIdAsync(int companyClientId)
     {
         return await context.ComplianceTasks
             .Include(x => x.CompanyClient)
-            .Where(x => x.CompanyClientId == companyClientId && x.CompanyClient != null && x.CompanyClient.IsActive)
+            .Where(x => x.IsActive && x.CompanyClientId == companyClientId && x.CompanyClient != null && x.CompanyClient.IsActive)
             .OrderBy(x => x.DueDate)
             .ToListAsync();
     }
@@ -33,6 +40,7 @@ public class ComplianceTaskService(FirmPulseDbContext context) : IComplianceTask
         return await context.ComplianceTasks
             .Include(x => x.CompanyClient)
             .Where(x =>
+                x.IsActive &&
                 x.CompanyClient != null &&
                 x.CompanyClient.IsActive &&
                 x.DueDate >= today &&
@@ -47,7 +55,7 @@ public class ComplianceTaskService(FirmPulseDbContext context) : IComplianceTask
     {
         var tasks = await context.ComplianceTasks
             .Include(x => x.CompanyClient)
-            .Where(x => x.CompanyClient != null && x.CompanyClient.IsActive)
+            .Where(x => x.IsActive && x.CompanyClient != null && x.CompanyClient.IsActive)
             .OrderBy(x => x.DueDate)
             .ToListAsync();
 
@@ -58,6 +66,7 @@ public class ComplianceTaskService(FirmPulseDbContext context) : IComplianceTask
     {
         entity.CreatedAt = DateTime.UtcNow;
         entity.UpdatedAt = DateTime.UtcNow;
+        entity.IsActive = true;
 
         context.ComplianceTasks.Add(entity);
         await context.SaveChangesAsync();
@@ -66,7 +75,7 @@ public class ComplianceTaskService(FirmPulseDbContext context) : IComplianceTask
 
     public async Task UpdateAsync(ComplianceTask entity)
     {
-        var existing = await context.ComplianceTasks.FirstOrDefaultAsync(x => x.Id == entity.Id);
+        var existing = await context.ComplianceTasks.FirstOrDefaultAsync(x => x.Id == entity.Id && x.IsActive);
         if (existing is null)
         {
             return;
@@ -88,9 +97,22 @@ public class ComplianceTaskService(FirmPulseDbContext context) : IComplianceTask
         await context.SaveChangesAsync();
     }
 
+    public async Task DeleteAsync(int id)
+    {
+        var existing = await context.ComplianceTasks.FirstOrDefaultAsync(x => x.Id == id && x.IsActive);
+        if (existing is null)
+        {
+            return;
+        }
+
+        existing.IsActive = false;
+        existing.UpdatedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+    }
+
     public async Task MarkCompletedAsync(int id)
     {
-        var existing = await context.ComplianceTasks.FirstOrDefaultAsync(x => x.Id == id);
+        var existing = await context.ComplianceTasks.FirstOrDefaultAsync(x => x.Id == id && x.IsActive);
         if (existing is null)
         {
             return;

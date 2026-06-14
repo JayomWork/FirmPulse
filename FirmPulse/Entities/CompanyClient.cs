@@ -13,33 +13,56 @@ public class CompanyClient
     [MaxLength(200)]
     public string CompanyName { get; set; } = string.Empty;
 
+    [Required]
     [MaxLength(21)]
-    public string? CIN { get; set; }
+    public string CIN { get; set; } = string.Empty;
 
+    [Required]
     [MaxLength(10)]
-    public string? PAN { get; set; }
+    public string PAN { get; set; } = string.Empty;
 
+    [Required]
     [DataType(DataType.Date)]
     public DateOnly? IncorporationDate { get; set; }
 
+    [Required]
     [MaxLength(500)]
-    public string? RegisteredOfficeAddress { get; set; }
+    public string RegisteredOfficeAddress { get; set; } = string.Empty;
 
+    [Required]
     [MaxLength(100)]
-    public string? CompanyType { get; set; }
+    public string CompanyType { get; set; } = CompanyClientTypes.PrivateLimited;
 
+    [Required]
     [MaxLength(100)]
-    public string? Status { get; set; }
+    public string Status { get; set; } = CompanyClientStatuses.Active;
 
+    [Required]
     [MaxLength(150)]
     [EmailAddress]
-    public string? Email { get; set; }
+    public string Email { get; set; } = string.Empty;
 
+    [Required]
+    [Phone]
     [MaxLength(20)]
-    public string? Phone { get; set; }
+    public string Phone { get; set; } = string.Empty;
 
+    [Required]
     [MaxLength(150)]
-    public string? ContactPersonName { get; set; }
+    public string ContactPersonName { get; set; } = string.Empty;
+
+    public int? FinancialYearEndMonth { get; set; }
+
+    public int? FinancialYearEndDay { get; set; }
+
+    public DateOnly? LastAGMDate { get; set; }
+
+    [MaxLength(100)]
+    public string? CompanyClass { get; set; }
+
+    public bool IsListed { get; set; }
+
+    public bool HasShareCapital { get; set; } = true;
 
     public bool IsActive { get; set; } = true;
 
@@ -52,4 +75,10 @@ public class CompanyClient
     public ICollection<ComplianceTask> ComplianceTasks { get; set; } = new List<ComplianceTask>();
     public ICollection<DocumentRecord> DocumentRecords { get; set; } = new List<DocumentRecord>();
     public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
+    public ICollection<CompanyCompliancePlan> CompanyCompliancePlans { get; set; } = new List<CompanyCompliancePlan>();
+    public ICollection<WorkItem> WorkItems { get; set; } = new List<WorkItem>();
+    public ICollection<FilingRecord> FilingRecords { get; set; } = new List<FilingRecord>();
+    public ICollection<WorkItemDocument> WorkItemDocuments { get; set; } = new List<WorkItemDocument>();
+    public ICollection<ClientFollowUp> ClientFollowUps { get; set; } = new List<ClientFollowUp>();
+    public ICollection<CompanyMeeting> CompanyMeetings { get; set; } = new List<CompanyMeeting>();
 }

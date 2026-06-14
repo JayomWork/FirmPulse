@@ -19,8 +19,9 @@ public class ComplianceTask
     [MaxLength(1000)]
     public string? Description { get; set; }
 
+    [Required]
     [MaxLength(100)]
-    public string? ComplianceType { get; set; }
+    public string ComplianceType { get; set; } = ComplianceTaskTypes.AnnualFiling;
 
     [DataType(DataType.Date)]
     public DateOnly DueDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
@@ -33,14 +34,17 @@ public class ComplianceTask
     [MaxLength(50)]
     public string Priority { get; set; } = ComplianceTaskPriorities.Medium;
 
+    [Required]
     [MaxLength(150)]
-    public string? AssignedTo { get; set; }
+    public string AssignedTo { get; set; } = string.Empty;
 
     [DataType(DataType.Date)]
     public DateOnly? CompletedDate { get; set; }
 
     [MaxLength(1000)]
     public string? Remarks { get; set; }
+
+    public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

@@ -85,6 +85,7 @@
                                         {
                                             <button class="btn btn-outline-success" @onclick="@(() => MarkCompletedAsync(task.Id))">Complete</button>
                                         }
+                                        <button class="btn btn-outline-danger" @onclick="@(() => DeleteTaskAsync(task.Id))">Delete</button>
                                     </div>
                                 </td>
                             </tr>
@@ -129,6 +130,12 @@
     private async Task MarkCompletedAsync(int id)
     {
         await ComplianceTaskService.MarkCompletedAsync(id);
+        await LoadTasksAsync();
+    }
+
+    private async Task DeleteTaskAsync(int id)
+    {
+        await ComplianceTaskService.DeleteAsync(id);
         await LoadTasksAsync();
     }
 }

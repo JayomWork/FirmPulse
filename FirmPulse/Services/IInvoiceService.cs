@@ -9,5 +9,6 @@ public interface IInvoiceService
     Task<Invoice?> GetByIdAsync(int id);
     Task<Invoice> CreateAsync(Invoice entity);
     Task UpdateAsync(Invoice entity);
+    Task DeleteAsync(int id);
     Task AddPaymentAsync(Payment payment);
 }

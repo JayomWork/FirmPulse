@@ -11,7 +11,7 @@ public class InvoiceService(FirmPulseDbContext context) : IInvoiceService
         return await context.Invoices
             .Include(x => x.CompanyClient)
             .Include(x => x.Payments)
-            .Where(x => x.CompanyClient != null && x.CompanyClient.IsActive)
+            .Where(x => x.IsActive && x.CompanyClient != null && x.CompanyClient.IsActive)
             .OrderByDescending(x => x.InvoiceDate)
             .ThenByDescending(x => x.Id)
             .ToListAsync();
@@ -22,7 +22,7 @@ public class InvoiceService(FirmPulseDbContext context) : IInvoiceService
         return await context.Invoices
             .Include(x => x.CompanyClient)
             .Include(x => x.Payments)
-            .Where(x => x.CompanyClientId == companyClientId)
+            .Where(x => x.IsActive && x.CompanyClientId == companyClientId)
             .OrderByDescending(x => x.InvoiceDate)
             .ToListAsync();
     }
@@ -32,13 +32,14 @@ public class InvoiceService(FirmPulseDbContext context) : IInvoiceService
         return await context.Invoices
             .Include(x => x.CompanyClient)
             .Include(x => x.Payments)
-            .FirstOrDefaultAsync(x => x.Id == id);
+            .FirstOrDefaultAsync(x => x.Id == id && x.IsActive);
     }
 
     public async Task<Invoice> CreateAsync(Invoice entity)
     {
         entity.CreatedAt = DateTime.UtcNow;
         entity.UpdatedAt = DateTime.UtcNow;
+        entity.IsActive = true;
 
         context.Invoices.Add(entity);
         await context.SaveChangesAsync();
@@ -47,7 +48,7 @@ public class InvoiceService(FirmPulseDbContext context) : IInvoiceService
 
     public async Task UpdateAsync(Invoice entity)
     {
-        var existing = await context.Invoices.FirstOrDefaultAsync(x => x.Id == entity.Id);
+        var existing = await context.Invoices.FirstOrDefaultAsync(x => x.Id == entity.Id && x.IsActive);
         if (existing is null)
         {
             return;
@@ -65,6 +66,19 @@ public class InvoiceService(FirmPulseDbContext context) : IInvoiceService
         existing.Remarks = entity.Remarks;
         existing.UpdatedAt = DateTime.UtcNow;
 
+        await context.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(int id)
+    {
+        var existing = await context.Invoices.FirstOrDefaultAsync(x => x.Id == id && x.IsActive);
+        if (existing is null)
+        {
+            return;
+        }
+
+        existing.IsActive = false;
+        existing.UpdatedAt = DateTime.UtcNow;
         await context.SaveChangesAsync();
     }
 
