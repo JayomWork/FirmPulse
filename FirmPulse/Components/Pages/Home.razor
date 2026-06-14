@@ -1,0 +1,127 @@
+@page "/"
+@inject IDashboardService DashboardService
+
+<PageTitle>Dashboard</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">FirmPulse MVP</p>
+        <h1>Dashboard</h1>
+        <p class="text-muted mb-0">Track companies, deadlines, and billing in one place.</p>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="alert alert-light border">Loading dashboard...</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-xl-4">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <p class="metric-label">Total Companies</p>
+                    <h2>@summary.TotalCompanies</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <p class="metric-label">Pending Tasks</p>
+                    <h2>@summary.PendingTasks</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <p class="metric-label">Overdue Tasks</p>
+                    <h2 class="text-danger">@summary.OverdueTasks</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <p class="metric-label">Upcoming Tasks</p>
+                    <h2>@summary.UpcomingTasks</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <p class="metric-label">Unpaid Invoice Total</p>
+                    <h2>@CurrencyHelper.ToInr(summary.UnpaidInvoiceTotal)</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <p class="metric-label">Paid Invoice Total</p>
+                    <h2>@CurrencyHelper.ToInr(summary.PaidInvoiceTotal)</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <h3 class="h5 mb-0">Upcoming Compliance Tasks</h3>
+        </div>
+        <div class="card-body p-0">
+            @if (upcomingTasks.Count == 0)
+            {
+                <div class="p-4 text-muted">No upcoming tasks in the next 30 days.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Task</th>
+                                <th>Company</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var task in upcomingTasks)
+                            {
+                                var status = ComplianceTaskHelper.GetDisplayStatus(task);
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">@task.Title</div>
+                                        <div class="small text-muted">@task.ComplianceType</div>
+                                    </td>
+                                    <td>@task.CompanyClient?.CompanyName</td>
+                                    <td>@task.DueDate.ToString("dd MMM yyyy")</td>
+                                    <td><span class="badge @BadgeHelper.GetTaskStatusBadge(status)">@status</span></td>
+                                    <td><span class="badge @BadgeHelper.GetPriorityBadge(task.Priority)">@task.Priority</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private DashboardSummaryModel summary = new();
+    private List<ComplianceTask> upcomingTasks = [];
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        summary = await DashboardService.GetSummaryAsync();
+        upcomingTasks = await DashboardService.GetUpcomingTasksAsync();
+        isLoading = false;
+    }
+}

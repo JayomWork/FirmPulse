@@ -1,0 +1,142 @@
+@page "/invoices/create"
+@page "/invoices/edit/{Id:int}"
+@inject IInvoiceService InvoiceService
+@inject FirmPulseDbContext DbContext
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(IsEditMode ? "Edit Invoice" : "Add Invoice")</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Billing</p>
+        <h1>@(IsEditMode ? "Edit Invoice" : "Add Invoice")</h1>
+        <p class="text-muted mb-0">Create and maintain invoice records for client engagements.</p>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="alert alert-light border">Loading invoice form...</div>
+}
+else
+{
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <EditForm Model="model" OnValidSubmit="SaveAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Company</label>
+                        <InputSelect class="form-select" @bind-Value="model.CompanyClientId">
+                            @foreach (var company in companies)
+                            {
+                                <option value="@company.Id">@company.CompanyName</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Invoice Number</label>
+                        <InputText class="form-control" @bind-Value="model.InvoiceNumber" />
+                        <ValidationMessage For="@(() => model.InvoiceNumber)" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Invoice Date</label>
+                        <InputDate class="form-control" @bind-Value="model.InvoiceDate" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Due Date</label>
+                        <InputDate class="form-control" @bind-Value="model.DueDate" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Status</label>
+                        <InputSelect class="form-select" @bind-Value="model.Status">
+                            @foreach (var status in InvoiceStatuses.All)
+                            {
+                                <option value="@status">@status</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Amount</label>
+                        <InputNumber class="form-control" @bind-Value="model.Amount" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Tax Amount</label>
+                        <InputNumber class="form-control" @bind-Value="model.TaxAmount" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Total Amount</label>
+                        <InputNumber class="form-control" @bind-Value="model.TotalAmount" />
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Remarks</label>
+                        <InputTextArea class="form-control" @bind-Value="model.Remarks" />
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary">Save Invoice</button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Cancel</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private Invoice model = new();
+    private List<CompanyClient> companies = [];
+    private bool isLoading = true;
+    private int defaultFirmId;
+
+    private bool IsEditMode => Id.HasValue;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        companies = await DbContext.CompanyClients.Where(x => x.IsActive).OrderBy(x => x.CompanyName).ToListAsync();
+        defaultFirmId = await DbContext.Firms.Select(x => x.Id).FirstAsync();
+
+        if (IsEditMode)
+        {
+            model = await InvoiceService.GetByIdAsync(Id!.Value) ?? new Invoice();
+        }
+        else
+        {
+            model = new Invoice
+            {
+                FirmId = defaultFirmId,
+                CompanyClientId = companies.FirstOrDefault()?.Id ?? 0,
+                InvoiceDate = DateOnly.FromDateTime(DateTime.Today),
+                DueDate = DateOnly.FromDateTime(DateTime.Today.AddDays(15)),
+                Status = InvoiceStatuses.Draft
+            };
+        }
+
+        isLoading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        model.FirmId = defaultFirmId;
+        model.TotalAmount = model.Amount + model.TaxAmount;
+
+        if (IsEditMode)
+        {
+            await InvoiceService.UpdateAsync(model);
+        }
+        else
+        {
+            await InvoiceService.CreateAsync(model);
+        }
+
+        NavigationManager.NavigateTo("/invoices");
+    }
+
+    private void Cancel() => NavigationManager.NavigateTo("/invoices");
+}

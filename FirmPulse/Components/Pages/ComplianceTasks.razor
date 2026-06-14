@@ -1,0 +1,134 @@
+@page "/compliance-tasks"
+@inject IComplianceTaskService ComplianceTaskService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Compliance Tasks</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Compliance</p>
+        <h1>Compliance Tasks</h1>
+        <p class="text-muted mb-0">Track filings, deadlines, and task ownership across all clients.</p>
+    </div>
+    <button class="btn btn-primary" @onclick="CreateTask">Add Task</button>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body border-bottom">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Status</label>
+                <InputSelect class="form-select" @bind-Value="selectedStatus">
+                    <option value="">All Statuses</option>
+                    @foreach (var status in ComplianceTaskStatuses.All)
+                    {
+                        <option value="@status">@status</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Priority</label>
+                <InputSelect class="form-select" @bind-Value="selectedPriority">
+                    <option value="">All Priorities</option>
+                    @foreach (var priority in ComplianceTaskPriorities.All)
+                    {
+                        <option value="@priority">@priority</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Due Date</label>
+                <InputDate class="form-control" @bind-Value="selectedDueDate" />
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        @if (isLoading)
+        {
+            <div class="p-4 text-muted">Loading compliance tasks...</div>
+        }
+        else if (FilteredTasks.Count == 0)
+        {
+            <div class="p-4 text-muted">No tasks match the current filters.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Task</th>
+                            <th>Company</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var task in FilteredTasks)
+                        {
+                            var displayStatus = ComplianceTaskHelper.GetDisplayStatus(task);
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@task.Title</div>
+                                    <div class="small text-muted">@task.AssignedTo</div>
+                                </td>
+                                <td>@task.CompanyClient?.CompanyName</td>
+                                <td>@task.DueDate.ToString("dd MMM yyyy")</td>
+                                <td><span class="badge @BadgeHelper.GetTaskStatusBadge(displayStatus)">@displayStatus</span></td>
+                                <td><span class="badge @BadgeHelper.GetPriorityBadge(task.Priority)">@task.Priority</span></td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" @onclick="@(() => EditTask(task.Id))">Edit</button>
+                                        @if (task.Status != ComplianceTaskStatuses.Completed)
+                                        {
+                                            <button class="btn btn-outline-success" @onclick="@(() => MarkCompletedAsync(task.Id))">Complete</button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<ComplianceTask> tasks = [];
+    private bool isLoading = true;
+    private string selectedStatus = string.Empty;
+    private string selectedPriority = string.Empty;
+    private DateOnly? selectedDueDate;
+
+    private List<ComplianceTask> FilteredTasks =>
+        tasks.Where(task =>
+            (string.IsNullOrWhiteSpace(selectedStatus) || ComplianceTaskHelper.GetDisplayStatus(task) == selectedStatus) &&
+            (string.IsNullOrWhiteSpace(selectedPriority) || task.Priority == selectedPriority) &&
+            (!selectedDueDate.HasValue || task.DueDate == selectedDueDate.Value))
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTasksAsync();
+    }
+
+    private async Task LoadTasksAsync()
+    {
+        isLoading = true;
+        tasks = await ComplianceTaskService.GetAllAsync();
+        isLoading = false;
+    }
+
+    private void CreateTask() => NavigationManager.NavigateTo("/compliance-tasks/create");
+
+    private void EditTask(int id) => NavigationManager.NavigateTo($"/compliance-tasks/edit/{id}");
+
+    private async Task MarkCompletedAsync(int id)
+    {
+        await ComplianceTaskService.MarkCompletedAsync(id);
+        await LoadTasksAsync();
+    }
+}

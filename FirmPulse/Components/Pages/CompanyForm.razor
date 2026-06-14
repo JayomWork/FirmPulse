@@ -1,0 +1,131 @@
+@page "/companies/create"
+@page "/companies/edit/{Id:int}"
+@inject ICompanyClientService CompanyClientService
+@inject FirmPulseDbContext DbContext
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(IsEditMode ? "Edit Company" : "Add Company")</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Clients</p>
+        <h1>@(IsEditMode ? "Edit Company" : "Add Company")</h1>
+        <p class="text-muted mb-0">Capture the key legal and contact information for a company client.</p>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="alert alert-light border">Loading company form...</div>
+}
+else
+{
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <EditForm Model="model" OnValidSubmit="SaveAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Company Name</label>
+                        <InputText class="form-control" @bind-Value="model.CompanyName" />
+                        <ValidationMessage For="@(() => model.CompanyName)" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">CIN / LLPIN</label>
+                        <InputText class="form-control" @bind-Value="model.CIN" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">PAN</label>
+                        <InputText class="form-control" @bind-Value="model.PAN" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Incorporation Date</label>
+                        <InputDate class="form-control" @bind-Value="model.IncorporationDate" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Company Type</label>
+                        <InputText class="form-control" @bind-Value="model.CompanyType" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Status</label>
+                        <InputText class="form-control" @bind-Value="model.Status" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <InputText class="form-control" @bind-Value="model.Email" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Phone</label>
+                        <InputText class="form-control" @bind-Value="model.Phone" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Contact Person Name</label>
+                        <InputText class="form-control" @bind-Value="model.ContactPersonName" />
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Registered Office Address</label>
+                        <InputTextArea class="form-control" @bind-Value="model.RegisteredOfficeAddress" />
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary">Save Company</button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Cancel</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private CompanyClient model = new();
+    private bool isLoading = true;
+    private int defaultFirmId;
+
+    private bool IsEditMode => Id.HasValue;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        defaultFirmId = await DbContext.Firms.Select(x => x.Id).FirstAsync();
+
+        if (IsEditMode)
+        {
+            model = await CompanyClientService.GetByIdAsync(Id!.Value) ?? new CompanyClient();
+        }
+        else
+        {
+            model = new CompanyClient
+            {
+                FirmId = defaultFirmId,
+                Status = "Active",
+                CompanyType = "Private Limited"
+            };
+        }
+
+        isLoading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        model.FirmId = defaultFirmId;
+
+        if (IsEditMode)
+        {
+            await CompanyClientService.UpdateAsync(model);
+        }
+        else
+        {
+            await CompanyClientService.CreateAsync(model);
+        }
+
+        NavigationManager.NavigateTo("/companies");
+    }
+
+    private void Cancel() => NavigationManager.NavigateTo("/companies");
+}

@@ -1,0 +1,149 @@
+@page "/compliance-tasks/create"
+@page "/compliance-tasks/edit/{Id:int}"
+@inject IComplianceTaskService ComplianceTaskService
+@inject FirmPulseDbContext DbContext
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(IsEditMode ? "Edit Compliance Task" : "Add Compliance Task")</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Compliance</p>
+        <h1>@(IsEditMode ? "Edit Compliance Task" : "Add Compliance Task")</h1>
+        <p class="text-muted mb-0">Create and manage client-specific compliance work items.</p>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="alert alert-light border">Loading task form...</div>
+}
+else
+{
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <EditForm Model="model" OnValidSubmit="SaveAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Company</label>
+                        <InputSelect class="form-select" @bind-Value="model.CompanyClientId">
+                            @foreach (var company in companies)
+                            {
+                                <option value="@company.Id">@company.CompanyName</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Compliance Type</label>
+                        <InputText class="form-control" @bind-Value="model.ComplianceType" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Title</label>
+                        <InputText class="form-control" @bind-Value="model.Title" />
+                        <ValidationMessage For="@(() => model.Title)" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Assigned To</label>
+                        <InputText class="form-control" @bind-Value="model.AssignedTo" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Due Date</label>
+                        <InputDate class="form-control" @bind-Value="model.DueDate" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Status</label>
+                        <InputSelect class="form-select" @bind-Value="model.Status">
+                            @foreach (var status in ComplianceTaskStatuses.All.Where(x => x != ComplianceTaskStatuses.Overdue))
+                            {
+                                <option value="@status">@status</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Priority</label>
+                        <InputSelect class="form-select" @bind-Value="model.Priority">
+                            @foreach (var priority in ComplianceTaskPriorities.All)
+                            {
+                                <option value="@priority">@priority</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Description</label>
+                        <InputTextArea class="form-control" @bind-Value="model.Description" />
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Remarks</label>
+                        <InputTextArea class="form-control" @bind-Value="model.Remarks" />
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary">Save Task</button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Cancel</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private ComplianceTask model = new();
+    private List<CompanyClient> companies = [];
+    private bool isLoading = true;
+    private int defaultFirmId;
+
+    private bool IsEditMode => Id.HasValue;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        companies = await DbContext.CompanyClients.Where(x => x.IsActive).OrderBy(x => x.CompanyName).ToListAsync();
+        defaultFirmId = await DbContext.Firms.Select(x => x.Id).FirstAsync();
+
+        if (IsEditMode)
+        {
+            model = await DbContext.ComplianceTasks.FirstOrDefaultAsync(x => x.Id == Id!.Value) ?? new ComplianceTask();
+        }
+        else
+        {
+            model = new ComplianceTask
+            {
+                FirmId = defaultFirmId,
+                CompanyClientId = companies.FirstOrDefault()?.Id ?? 0,
+                DueDate = DateOnly.FromDateTime(DateTime.Today.AddDays(7)),
+                Status = ComplianceTaskStatuses.Pending,
+                Priority = ComplianceTaskPriorities.Medium
+            };
+        }
+
+        isLoading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        model.FirmId = defaultFirmId;
+        model.CompletedDate = model.Status == ComplianceTaskStatuses.Completed
+            ? model.CompletedDate ?? DateOnly.FromDateTime(DateTime.Today)
+            : null;
+
+        if (IsEditMode)
+        {
+            await ComplianceTaskService.UpdateAsync(model);
+        }
+        else
+        {
+            await ComplianceTaskService.CreateAsync(model);
+        }
+
+        NavigationManager.NavigateTo("/compliance-tasks");
+    }
+
+    private void Cancel() => NavigationManager.NavigateTo("/compliance-tasks");
+}
