@@ -1,0 +1,150 @@
+@page "/draft-templates/create"
+@page "/draft-templates/edit/{Id:int}"
+@inject IDocumentTemplateService DocumentTemplateService
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(IsEditMode ? "Edit Draft Template" : "Add Draft Template")</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Draft Library</p>
+        <h1>@(IsEditMode ? "Edit Draft Template" : "Add Draft Template")</h1>
+        <p class="text-muted mb-0">Use placeholders like {{CompanyName}}, {{CIN}}, {{DirectorName}}, and {{MeetingDate}}.</p>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="alert alert-light border">Loading template...</div>
+}
+else
+{
+    <div class="row g-4">
+        <div class="col-xl-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <EditForm Model="model" OnValidSubmit="SaveAsync">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Template Name</label>
+                                <InputText class="form-control" @bind-Value="model.TemplateName" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Category</label>
+                                <InputText class="form-control" @bind-Value="model.TemplateCategory" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Description</label>
+                                <InputTextArea class="form-control" @bind-Value="model.Description" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Template Content</label>
+                                <InputTextArea class="form-control font-monospace" rows="18" @bind-Value="model.TemplateContent" />
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <InputCheckbox class="form-check-input" @bind-Value="model.IsActive" />
+                                    <label class="form-check-label ms-2">Active</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">Save Template</button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Cancel</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">Insert Placeholder</h2></div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var placeholder in commonPlaceholders)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="@(() => InsertPlaceholder(placeholder))">@placeholder</button>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">Detected Placeholders</h2></div>
+                <div class="card-body">
+                    @if (DetectedPlaceholders.Count == 0)
+                    {
+                        <div class="text-muted">No placeholders detected.</div>
+                    }
+                    else
+                    {
+                        @foreach (var placeholder in DetectedPlaceholders)
+                        {
+                            <span class="badge bg-light text-dark border me-1 mb-1">@placeholder</span>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private DocumentTemplate model = new() { TemplateCategory = "Board Documents", IsActive = true };
+    private bool isLoading = true;
+    private bool IsEditMode => Id.HasValue;
+
+    private readonly string[] commonPlaceholders =
+    [
+        "CompanyName", "CIN", "RegistrationNumber", "RegisteredOfficeAddress", "DirectorName",
+        "DIN", "MeetingDate", "AppointmentDate", "Designation", "FinancialYearStart", "FinancialYearEnd"
+    ];
+
+    private IReadOnlyList<string> DetectedPlaceholders => DocumentTemplateService.ExtractPlaceholders(model.TemplateContent);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        if (IsEditMode)
+        {
+            model = await DocumentTemplateService.GetTemplateByIdAsync(Id!.Value) ?? new DocumentTemplate { TemplateCategory = "Board Documents", IsActive = true };
+        }
+        else
+        {
+            model = new DocumentTemplate { TemplateCategory = "Board Documents", IsActive = true };
+        }
+
+        isLoading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (IsEditMode)
+        {
+            await DocumentTemplateService.UpdateTemplateAsync(model);
+        }
+        else
+        {
+            await DocumentTemplateService.CreateTemplateAsync(model);
+        }
+
+        NavigationManager.NavigateTo("/draft-library");
+    }
+
+    private void InsertPlaceholder(string placeholder)
+    {
+        var token = "{{" + placeholder + "}}";
+        model.TemplateContent = string.IsNullOrWhiteSpace(model.TemplateContent)
+            ? token
+            : $"{model.TemplateContent} {token}";
+    }
+
+    private void Cancel() => NavigationManager.NavigateTo("/draft-library");
+}

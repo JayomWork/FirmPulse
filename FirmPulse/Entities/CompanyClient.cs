@@ -33,6 +33,18 @@ public class CompanyClient
     [MaxLength(100)]
     public string CompanyType { get; set; } = CompanyClientTypes.PrivateLimited;
 
+    [MaxLength(100)]
+    public string? RegistrationNumber { get; set; }
+
+    [MaxLength(100)]
+    public string? City { get; set; }
+
+    [MaxLength(100)]
+    public string? State { get; set; }
+
+    [MaxLength(20)]
+    public string? PinCode { get; set; }
+
     [Required]
     [MaxLength(100)]
     public string Status { get; set; } = CompanyClientStatuses.Active;
@@ -56,6 +68,14 @@ public class CompanyClient
     public int? FinancialYearEndDay { get; set; }
 
     public DateOnly? LastAGMDate { get; set; }
+
+    public decimal? AuthorizedCapital { get; set; }
+
+    public decimal? PaidUpCapital { get; set; }
+
+    public DateOnly? FinancialYearStart { get; set; }
+
+    public DateOnly? FinancialYearEnd { get; set; }
 
     [MaxLength(100)]
     public string? CompanyClass { get; set; }
@@ -81,4 +101,5 @@ public class CompanyClient
     public ICollection<WorkItemDocument> WorkItemDocuments { get; set; } = new List<WorkItemDocument>();
     public ICollection<ClientFollowUp> ClientFollowUps { get; set; } = new List<ClientFollowUp>();
     public ICollection<CompanyMeeting> CompanyMeetings { get; set; } = new List<CompanyMeeting>();
+    public ICollection<GeneratedDocument> GeneratedDocuments { get; set; } = new List<GeneratedDocument>();
 }

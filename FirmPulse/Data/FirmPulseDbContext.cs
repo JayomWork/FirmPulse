@@ -25,6 +25,10 @@ public class FirmPulseDbContext(DbContextOptions<FirmPulseDbContext> options) : 
     public DbSet<WorkItemDocument> WorkItemDocuments => Set<WorkItemDocument>();
     public DbSet<ClientFollowUp> ClientFollowUps => Set<ClientFollowUp>();
     public DbSet<CompanyMeeting> CompanyMeetings => Set<CompanyMeeting>();
+    public DbSet<DocumentTemplate> DocumentTemplates => Set<DocumentTemplate>();
+    public DbSet<DocumentTemplateField> DocumentTemplateFields => Set<DocumentTemplateField>();
+    public DbSet<GeneratedDocument> GeneratedDocuments => Set<GeneratedDocument>();
+    public DbSet<GeneratedDocumentValue> GeneratedDocumentValues => Set<GeneratedDocumentValue>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -45,11 +49,17 @@ public class FirmPulseDbContext(DbContextOptions<FirmPulseDbContext> options) : 
             entity.Property(x => x.PAN).IsRequired().HasMaxLength(10);
             entity.Property(x => x.RegisteredOfficeAddress).IsRequired().HasMaxLength(500);
             entity.Property(x => x.CompanyType).IsRequired().HasMaxLength(100);
+            entity.Property(x => x.RegistrationNumber).HasMaxLength(100);
+            entity.Property(x => x.City).HasMaxLength(100);
+            entity.Property(x => x.State).HasMaxLength(100);
+            entity.Property(x => x.PinCode).HasMaxLength(20);
             entity.Property(x => x.Status).IsRequired().HasMaxLength(100);
             entity.Property(x => x.Email).IsRequired().HasMaxLength(150);
             entity.Property(x => x.Phone).IsRequired().HasMaxLength(20);
             entity.Property(x => x.ContactPersonName).IsRequired().HasMaxLength(150);
             entity.Property(x => x.CompanyClass).HasMaxLength(100);
+            entity.Property(x => x.AuthorizedCapital).HasPrecision(18, 2);
+            entity.Property(x => x.PaidUpCapital).HasPrecision(18, 2);
 
             entity.HasOne(x => x.Firm)
                 .WithMany(x => x.CompanyClients)
@@ -64,6 +74,8 @@ public class FirmPulseDbContext(DbContextOptions<FirmPulseDbContext> options) : 
             entity.Property(x => x.PAN).HasMaxLength(10);
             entity.Property(x => x.Email).HasMaxLength(150);
             entity.Property(x => x.Phone).HasMaxLength(20);
+            entity.Property(x => x.Address).HasMaxLength(500);
+            entity.Property(x => x.Designation).HasMaxLength(100);
 
             entity.HasOne(x => x.CompanyClient)
                 .WithMany(x => x.Directors)
@@ -412,6 +424,57 @@ public class FirmPulseDbContext(DbContextOptions<FirmPulseDbContext> options) : 
                 .WithMany(x => x.Meetings)
                 .HasForeignKey(x => x.CompanyCompliancePlanId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DocumentTemplate>(entity =>
+        {
+            entity.Property(x => x.TemplateName).IsRequired().HasMaxLength(200);
+            entity.Property(x => x.TemplateCategory).IsRequired().HasMaxLength(100);
+            entity.Property(x => x.Description).HasMaxLength(1000);
+            entity.Property(x => x.TemplateContent).IsRequired();
+        });
+
+        modelBuilder.Entity<DocumentTemplateField>(entity =>
+        {
+            entity.Property(x => x.FieldKey).IsRequired().HasMaxLength(100);
+            entity.Property(x => x.FieldLabel).IsRequired().HasMaxLength(150);
+            entity.Property(x => x.FieldType).IsRequired().HasMaxLength(50);
+            entity.Property(x => x.DataSource).HasMaxLength(100);
+            entity.Property(x => x.DefaultValue).HasMaxLength(500);
+
+            entity.HasOne(x => x.DocumentTemplate)
+                .WithMany(x => x.Fields)
+                .HasForeignKey(x => x.DocumentTemplateId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<GeneratedDocument>(entity =>
+        {
+            entity.Property(x => x.DocumentTitle).IsRequired().HasMaxLength(250);
+            entity.Property(x => x.GeneratedContent).IsRequired();
+            entity.Property(x => x.WordFilePath).HasMaxLength(500);
+            entity.Property(x => x.PdfFilePath).HasMaxLength(500);
+            entity.Property(x => x.GeneratedBy).HasMaxLength(150);
+
+            entity.HasOne(x => x.CompanyClient)
+                .WithMany(x => x.GeneratedDocuments)
+                .HasForeignKey(x => x.CompanyClientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.DocumentTemplate)
+                .WithMany(x => x.GeneratedDocuments)
+                .HasForeignKey(x => x.DocumentTemplateId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<GeneratedDocumentValue>(entity =>
+        {
+            entity.Property(x => x.FieldKey).IsRequired().HasMaxLength(100);
+
+            entity.HasOne(x => x.GeneratedDocument)
+                .WithMany(x => x.Values)
+                .HasForeignKey(x => x.GeneratedDocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

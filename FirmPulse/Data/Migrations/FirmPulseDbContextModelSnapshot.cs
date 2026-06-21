@@ -116,16 +116,30 @@ namespace FirmPulse.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
+
+                    b.Property<decimal?>("AuthorizedCapital")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<int?>("FinancialYearEndDay")
                         .HasColumnType("integer");
 
                     b.Property<int?>("FinancialYearEndMonth")
                         .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("FinancialYearEnd")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("FinancialYearStart")
+                        .HasColumnType("date");
 
                     b.Property<int>("FirmId")
                         .HasColumnType("integer");
@@ -150,8 +164,16 @@ namespace FirmPulse.Data.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
+                    b.Property<decimal?>("PaidUpCapital")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
                     b.Property<string>("Phone")
                         .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("PinCode")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
@@ -159,6 +181,14 @@ namespace FirmPulse.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<string>("RegistrationNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("State")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -502,11 +532,19 @@ namespace FirmPulse.Data.Migrations
                     b.Property<DateOnly?>("AppointmentDate")
                         .HasColumnType("date");
 
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<int>("CompanyClientId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Designation")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("DIN")
                         .HasMaxLength(20)
@@ -543,6 +581,166 @@ namespace FirmPulse.Data.Migrations
                     b.HasIndex("CompanyClientId");
 
                     b.ToTable("Directors");
+                });
+
+            modelBuilder.Entity("FirmPulse.Entities.DocumentTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("TemplateCategory")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("TemplateContent")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TemplateName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DocumentTemplates");
+                });
+
+            modelBuilder.Entity("FirmPulse.Entities.DocumentTemplateField", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("DataSource")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("DefaultValue")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DocumentTemplateId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FieldKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("FieldLabel")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("FieldType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentTemplateId");
+
+                    b.ToTable("DocumentTemplateFields");
+                });
+
+            modelBuilder.Entity("FirmPulse.Entities.GeneratedDocument", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CompanyClientId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DocumentTemplateId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DocumentTitle")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("GeneratedBy")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("GeneratedContent")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("GeneratedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PdfFilePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("WordFilePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyClientId");
+
+                    b.HasIndex("DocumentTemplateId");
+
+                    b.ToTable("GeneratedDocuments");
+                });
+
+            modelBuilder.Entity("FirmPulse.Entities.GeneratedDocumentValue", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("FieldKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("FieldValue")
+                        .HasColumnType("text");
+
+                    b.Property<int>("GeneratedDocumentId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GeneratedDocumentId");
+
+                    b.ToTable("GeneratedDocumentValues");
                 });
 
             modelBuilder.Entity("FirmPulse.Entities.DocumentChecklistTemplate", b =>
@@ -1357,6 +1555,47 @@ namespace FirmPulse.Data.Migrations
                     b.Navigation("CompanyClient");
                 });
 
+            modelBuilder.Entity("FirmPulse.Entities.DocumentTemplateField", b =>
+                {
+                    b.HasOne("FirmPulse.Entities.DocumentTemplate", "DocumentTemplate")
+                        .WithMany("Fields")
+                        .HasForeignKey("DocumentTemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DocumentTemplate");
+                });
+
+            modelBuilder.Entity("FirmPulse.Entities.GeneratedDocument", b =>
+                {
+                    b.HasOne("FirmPulse.Entities.CompanyClient", "CompanyClient")
+                        .WithMany("GeneratedDocuments")
+                        .HasForeignKey("CompanyClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FirmPulse.Entities.DocumentTemplate", "DocumentTemplate")
+                        .WithMany("GeneratedDocuments")
+                        .HasForeignKey("DocumentTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CompanyClient");
+
+                    b.Navigation("DocumentTemplate");
+                });
+
+            modelBuilder.Entity("FirmPulse.Entities.GeneratedDocumentValue", b =>
+                {
+                    b.HasOne("FirmPulse.Entities.GeneratedDocument", "GeneratedDocument")
+                        .WithMany("Values")
+                        .HasForeignKey("GeneratedDocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GeneratedDocument");
+                });
+
             modelBuilder.Entity("FirmPulse.Entities.DocumentChecklistTemplate", b =>
                 {
                     b.HasOne("FirmPulse.Entities.ComplianceTemplateItem", "ComplianceTemplateItem")
@@ -1583,6 +1822,8 @@ namespace FirmPulse.Data.Migrations
 
                     b.Navigation("FilingRecords");
 
+                    b.Navigation("GeneratedDocuments");
+
                     b.Navigation("Invoices");
 
                     b.Navigation("WorkItemDocuments");
@@ -1614,9 +1855,21 @@ namespace FirmPulse.Data.Migrations
                     b.Navigation("DocumentChecklistTemplates");
                 });
 
+            modelBuilder.Entity("FirmPulse.Entities.DocumentTemplate", b =>
+                {
+                    b.Navigation("Fields");
+
+                    b.Navigation("GeneratedDocuments");
+                });
+
             modelBuilder.Entity("FirmPulse.Entities.FilingRecord", b =>
                 {
                     b.Navigation("DocumentRecords");
+                });
+
+            modelBuilder.Entity("FirmPulse.Entities.GeneratedDocument", b =>
+                {
+                    b.Navigation("Values");
                 });
 
             modelBuilder.Entity("FirmPulse.Entities.Firm", b =>

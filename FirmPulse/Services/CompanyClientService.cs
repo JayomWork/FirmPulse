@@ -67,6 +67,10 @@ public class CompanyClientService(FirmPulseDbContext context) : ICompanyClientSe
         existing.IncorporationDate = entity.IncorporationDate;
         existing.RegisteredOfficeAddress = entity.RegisteredOfficeAddress;
         existing.CompanyType = entity.CompanyType;
+        existing.RegistrationNumber = entity.RegistrationNumber;
+        existing.City = entity.City;
+        existing.State = entity.State;
+        existing.PinCode = entity.PinCode;
         existing.Status = entity.Status;
         existing.Email = entity.Email;
         existing.Phone = entity.Phone;
@@ -75,6 +79,10 @@ public class CompanyClientService(FirmPulseDbContext context) : ICompanyClientSe
         existing.FinancialYearEndMonth = entity.FinancialYearEndMonth;
         existing.FinancialYearEndDay = entity.FinancialYearEndDay;
         existing.LastAGMDate = entity.LastAGMDate;
+        existing.AuthorizedCapital = entity.AuthorizedCapital;
+        existing.PaidUpCapital = entity.PaidUpCapital;
+        existing.FinancialYearStart = entity.FinancialYearStart;
+        existing.FinancialYearEnd = entity.FinancialYearEnd;
         existing.CompanyClass = entity.CompanyClass;
         existing.IsListed = entity.IsListed;
         existing.HasShareCapital = entity.HasShareCapital;

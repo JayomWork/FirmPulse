@@ -33,6 +33,7 @@ else
                 <div class="card-body">
                     <dl class="row detail-list mb-0">
                         <dt class="col-sm-5">CIN</dt><dd class="col-sm-7">@ValueOrDash(company.CIN)</dd>
+                        <dt class="col-sm-5">Registration No.</dt><dd class="col-sm-7">@ValueOrDash(company.RegistrationNumber)</dd>
                         <dt class="col-sm-5">PAN</dt><dd class="col-sm-7">@ValueOrDash(company.PAN)</dd>
                         <dt class="col-sm-5">Email</dt><dd class="col-sm-7">@ValueOrDash(company.Email)</dd>
                         <dt class="col-sm-5">Phone</dt><dd class="col-sm-7">@ValueOrDash(company.Phone)</dd>
@@ -40,6 +41,10 @@ else
                         <dt class="col-sm-5">Incorporated</dt><dd class="col-sm-7">@FormatDate(company.IncorporationDate)</dd>
                         <dt class="col-sm-5">Last AGM</dt><dd class="col-sm-7">@FormatDate(company.LastAGMDate)</dd>
                         <dt class="col-sm-5">FY End</dt><dd class="col-sm-7">@FormatFyEnd(company)</dd>
+                        <dt class="col-sm-5">FY Period</dt><dd class="col-sm-7">@FormatDate(company.FinancialYearStart) - @FormatDate(company.FinancialYearEnd)</dd>
+                        <dt class="col-sm-5">Authorized Capital</dt><dd class="col-sm-7">@FormatAmount(company.AuthorizedCapital)</dd>
+                        <dt class="col-sm-5">Paid-up Capital</dt><dd class="col-sm-7">@FormatAmount(company.PaidUpCapital)</dd>
+                        <dt class="col-sm-5">City/State</dt><dd class="col-sm-7">@FormatLocation(company)</dd>
                         <dt class="col-sm-5">Listed</dt><dd class="col-sm-7">@(company.IsListed ? "Yes" : "No")</dd>
                         <dt class="col-sm-5">Share Capital</dt><dd class="col-sm-7">@(company.HasShareCapital ? "Yes" : "No")</dd>
                         <dt class="col-sm-5">Registered Office</dt><dd class="col-sm-7">@ValueOrDash(company.RegisteredOfficeAddress)</dd>
@@ -385,4 +390,11 @@ else
     private static string FormatFyEnd(CompanyClient company) => company.FinancialYearEndMonth.HasValue && company.FinancialYearEndDay.HasValue
         ? $"{company.FinancialYearEndDay:00}/{company.FinancialYearEndMonth:00}"
         : "-";
+    private static string FormatAmount(decimal? value) => value.HasValue ? value.Value.ToString("N2") : "-";
+    private static string FormatLocation(CompanyClient company)
+    {
+        var parts = new[] { company.City, company.State, company.PinCode }.Where(x => !string.IsNullOrWhiteSpace(x));
+        var location = string.Join(", ", parts);
+        return string.IsNullOrWhiteSpace(location) ? "-" : location;
+    }
 }

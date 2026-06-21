@@ -72,6 +72,22 @@ else
                         <InputText class="form-control" @bind-Value="model.CompanyClass" />
                     </div>
                     <div class="col-md-4">
+                        <label class="form-label">Registration Number</label>
+                        <InputText class="form-control" @bind-Value="model.RegistrationNumber" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">City</label>
+                        <InputText class="form-control" @bind-Value="model.City" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">State</label>
+                        <InputText class="form-control" @bind-Value="model.State" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Pin Code</label>
+                        <InputText class="form-control" @bind-Value="model.PinCode" />
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label">FY End Month</label>
                         <InputNumber class="form-control" @bind-Value="model.FinancialYearEndMonth" />
                     </div>
@@ -82,6 +98,22 @@ else
                     <div class="col-md-4">
                         <label class="form-label">Last AGM Date</label>
                         <InputDate class="form-control" @bind-Value="model.LastAGMDate" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Financial Year Start</label>
+                        <InputDate class="form-control" @bind-Value="model.FinancialYearStart" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Financial Year End</label>
+                        <InputDate class="form-control" @bind-Value="model.FinancialYearEnd" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Authorized Capital</label>
+                        <InputNumber class="form-control" @bind-Value="model.AuthorizedCapital" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Paid-up Capital</label>
+                        <InputNumber class="form-control" @bind-Value="model.PaidUpCapital" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Email</label>
@@ -155,6 +187,8 @@ else
                 CompanyClass = "Private Company Limited by Shares",
                 FinancialYearEndMonth = 3,
                 FinancialYearEndDay = 31,
+                FinancialYearStart = new DateOnly(DateTime.Today.Month >= 4 ? DateTime.Today.Year : DateTime.Today.Year - 1, 4, 1),
+                FinancialYearEnd = new DateOnly(DateTime.Today.Month >= 4 ? DateTime.Today.Year + 1 : DateTime.Today.Year, 3, 31),
                 HasShareCapital = true
             };
         }

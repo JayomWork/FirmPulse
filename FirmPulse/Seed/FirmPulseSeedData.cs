@@ -11,6 +11,7 @@ public static class FirmPulseSeedData
         if (await context.Firms.AnyAsync())
         {
             await SeedSystemMastersAsync(context);
+            await SeedDocumentTemplatesAsync(context);
             return;
         }
 
@@ -165,6 +166,10 @@ public static class FirmPulseSeedData
                 IncorporationDate = new DateOnly(2020, 4, 12),
                 RegisteredOfficeAddress = "Madhapur, Hyderabad, Telangana",
                 CompanyType = CompanyClientTypes.PrivateLimited,
+                RegistrationNumber = "123456",
+                City = "Hyderabad",
+                State = "Telangana",
+                PinCode = "500081",
                 CompanyClass = "Private Company Limited by Shares",
                 Status = CompanyClientStatuses.Active,
                 Email = "compliance@bluewave.in",
@@ -172,6 +177,10 @@ public static class FirmPulseSeedData
                 ContactPersonName = "Rohit Sharma",
                 FinancialYearEndMonth = 3,
                 FinancialYearEndDay = 31,
+                FinancialYearStart = new DateOnly(today.Month >= 4 ? today.Year : today.Year - 1, 4, 1),
+                FinancialYearEnd = new DateOnly(today.Month >= 4 ? today.Year + 1 : today.Year, 3, 31),
+                AuthorizedCapital = 1000000m,
+                PaidUpCapital = 500000m,
                 LastAGMDate = today.AddDays(-210),
                 HasShareCapital = true,
                 IsListed = false
@@ -185,6 +194,10 @@ public static class FirmPulseSeedData
                 IncorporationDate = new DateOnly(2021, 8, 2),
                 RegisteredOfficeAddress = "Andheri East, Mumbai, Maharashtra",
                 CompanyType = CompanyClientTypes.Llp,
+                RegistrationNumber = "7890",
+                City = "Mumbai",
+                State = "Maharashtra",
+                PinCode = "400093",
                 CompanyClass = "Limited Liability Partnership",
                 Status = CompanyClientStatuses.Active,
                 Email = "accounts@greenleaf.in",
@@ -192,6 +205,8 @@ public static class FirmPulseSeedData
                 ContactPersonName = "Nisha Patel",
                 FinancialYearEndMonth = 3,
                 FinancialYearEndDay = 31,
+                FinancialYearStart = new DateOnly(today.Month >= 4 ? today.Year : today.Year - 1, 4, 1),
+                FinancialYearEnd = new DateOnly(today.Month >= 4 ? today.Year + 1 : today.Year, 3, 31),
                 HasShareCapital = false,
                 IsListed = false
             },
@@ -204,6 +219,10 @@ public static class FirmPulseSeedData
                 IncorporationDate = new DateOnly(2018, 11, 19),
                 RegisteredOfficeAddress = "Indiranagar, Bengaluru, Karnataka",
                 CompanyType = CompanyClientTypes.PublicLimited,
+                RegistrationNumber = "654321",
+                City = "Bengaluru",
+                State = "Karnataka",
+                PinCode = "560038",
                 CompanyClass = "Listed Public Company",
                 Status = CompanyClientStatuses.Active,
                 Email = "legal@vertexretail.in",
@@ -211,6 +230,10 @@ public static class FirmPulseSeedData
                 ContactPersonName = "Meera Iyer",
                 FinancialYearEndMonth = 3,
                 FinancialYearEndDay = 31,
+                FinancialYearStart = new DateOnly(today.Month >= 4 ? today.Year : today.Year - 1, 4, 1),
+                FinancialYearEnd = new DateOnly(today.Month >= 4 ? today.Year + 1 : today.Year, 3, 31),
+                AuthorizedCapital = 50000000m,
+                PaidUpCapital = 25000000m,
                 LastAGMDate = today.AddDays(-280),
                 HasShareCapital = true,
                 IsListed = true
@@ -219,10 +242,10 @@ public static class FirmPulseSeedData
 
         var directors = new List<Director>
         {
-            new() { CompanyClient = companies[0], FullName = "Amit Verma", DIN = "01234567", PAN = "ABCPV1234D", Email = "amit.verma@bluewave.in", Phone = "+91 90001 11111", AppointmentDate = new DateOnly(2020, 4, 12) },
-            new() { CompanyClient = companies[0], FullName = "Neha Joshi", DIN = "07654321", PAN = "ADEPJ5678R", Email = "neha.joshi@bluewave.in", Phone = "+91 90002 22222", AppointmentDate = new DateOnly(2021, 3, 10) },
-            new() { CompanyClient = companies[1], FullName = "Karan Mehta", DIN = "04561234", PAN = "AFCPM4567Q", Email = "karan@greenleaf.in", Phone = "+91 90123 98765", AppointmentDate = new DateOnly(2021, 8, 2) },
-            new() { CompanyClient = companies[2], FullName = "Sonal Rao", DIN = "09876123", PAN = "ACDPR6789N", Email = "sonal@vertexretail.in", Phone = "+91 99887 33445", AppointmentDate = new DateOnly(2018, 11, 19) }
+            new() { CompanyClient = companies[0], FullName = "Amit Verma", DIN = "01234567", PAN = "ABCPV1234D", Email = "amit.verma@bluewave.in", Phone = "+91 90001 11111", Address = "Madhapur, Hyderabad", Designation = "Director", AppointmentDate = new DateOnly(2020, 4, 12) },
+            new() { CompanyClient = companies[0], FullName = "Neha Joshi", DIN = "07654321", PAN = "ADEPJ5678R", Email = "neha.joshi@bluewave.in", Phone = "+91 90002 22222", Address = "Jubilee Hills, Hyderabad", Designation = "Director", AppointmentDate = new DateOnly(2021, 3, 10) },
+            new() { CompanyClient = companies[1], FullName = "Karan Mehta", DIN = "04561234", PAN = "AFCPM4567Q", Email = "karan@greenleaf.in", Phone = "+91 90123 98765", Address = "Andheri East, Mumbai", Designation = "Designated Partner", AppointmentDate = new DateOnly(2021, 8, 2) },
+            new() { CompanyClient = companies[2], FullName = "Sonal Rao", DIN = "09876123", PAN = "ACDPR6789N", Email = "sonal@vertexretail.in", Phone = "+91 99887 33445", Address = "Indiranagar, Bengaluru", Designation = "Director", AppointmentDate = new DateOnly(2018, 11, 19) }
         };
 
         var tasks = new List<ComplianceTask>
@@ -365,6 +388,7 @@ public static class FirmPulseSeedData
         context.AddRange(payments);
 
         await context.SaveChangesAsync();
+        await SeedDocumentTemplatesAsync(context);
     }
 
     private static async Task SeedSystemMastersAsync(FirmPulseDbContext context)
@@ -492,6 +516,172 @@ public static class FirmPulseSeedData
                     new DocumentChecklistTemplate { ServiceMasterId = svcMgt7.Id, DocumentName = "Previous year filing record", Description = "Last year SRN and challan reference.", IsMandatory = false, DisplayOrder = 9 }
                 );
                 await context.SaveChangesAsync();
+            }
+        }
+
+        await SeedDocumentTemplatesAsync(context);
+    }
+
+    private static async Task SeedDocumentTemplatesAsync(FirmPulseDbContext context)
+    {
+        if (!await DocumentTemplateTableExistsAsync(context))
+        {
+            return;
+        }
+
+        if (await context.DocumentTemplates.AnyAsync())
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        var templates = new[]
+        {
+            CreateDocumentTemplate(
+                "Board Resolution - Appointment of Director",
+                "Board Documents",
+                "Resolution draft for appointment of a director.",
+                """
+                CERTIFIED TRUE COPY OF THE RESOLUTION PASSED AT THE MEETING OF THE BOARD OF DIRECTORS OF {{CompanyName}} HELD ON {{MeetingDate}} AT {{RegisteredOfficeAddress}}
+
+                "RESOLVED THAT Mr./Ms. {{DirectorName}}, having DIN {{DIN}}, be and is hereby appointed as Director of the Company with effect from {{AppointmentDate}}."
+
+                RESOLVED FURTHER THAT any Director of the Company be and is hereby authorized to do all such acts, deeds and things as may be necessary to give effect to this resolution.
+                """,
+                now),
+            CreateDocumentTemplate(
+                "Board Meeting Notice",
+                "Board Documents",
+                "Notice draft for calling a board meeting.",
+                """
+                NOTICE is hereby given that a meeting of the Board of Directors of {{CompanyName}} having CIN {{CIN}} will be held on {{MeetingDate}} at {{RegisteredOfficeAddress}}.
+
+                The agenda for the meeting includes consideration of routine business and such other matters as may be placed before the Board.
+
+                For {{CompanyName}}
+                {{DirectorName}}
+                {{Designation}}
+                """,
+                now),
+            CreateDocumentTemplate(
+                "DIR-2 Consent Draft",
+                "Director Documents",
+                "Consent draft for a person proposed to be appointed as director.",
+                """
+                To,
+                The Board of Directors
+                {{CompanyName}}
+                {{RegisteredOfficeAddress}}
+
+                Subject: Consent to act as Director
+
+                I, {{DirectorName}}, having DIN {{DIN}}, hereby give my consent to act as Director of {{CompanyName}} with effect from {{AppointmentDate}}.
+
+                Name: {{DirectorName}}
+                DIN: {{DIN}}
+                Address: {{DirectorAddress}}
+                Date: {{ConsentDate}}
+                """,
+                now)
+        };
+
+        context.DocumentTemplates.AddRange(templates);
+        await context.SaveChangesAsync();
+    }
+
+    private static DocumentTemplate CreateDocumentTemplate(string name, string category, string description, string content, DateTime now)
+    {
+        var template = new DocumentTemplate
+        {
+            TemplateName = name,
+            TemplateCategory = category,
+            Description = description,
+            TemplateContent = content,
+            IsActive = true,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+
+        var fields = ExtractTemplateFields(content);
+        for (var index = 0; index < fields.Count; index++)
+        {
+            var field = fields[index];
+            template.Fields.Add(new DocumentTemplateField
+            {
+                FieldKey = field,
+                FieldLabel = SplitFieldLabel(field),
+                FieldType = field.Contains("Date", StringComparison.OrdinalIgnoreCase) ? "Date" : "Text",
+                DataSource = GetFieldDataSource(field),
+                IsRequired = true,
+                DisplayOrder = index + 1
+            });
+        }
+
+        return template;
+    }
+
+    private static List<string> ExtractTemplateFields(string content)
+    {
+        var matches = System.Text.RegularExpressions.Regex.Matches(content, @"\{\{\s*(?<key>[A-Za-z0-9_]+)\s*\}\}");
+        return matches
+            .Select(match => match.Groups["key"].Value.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string SplitFieldLabel(string key)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(key, "([a-z])([A-Z])", "$1 $2");
+    }
+
+    private static string? GetFieldDataSource(string key)
+    {
+        var companyFields = new[] { "CompanyName", "CIN", "RegisteredOfficeAddress" };
+        var directorFields = new[] { "DirectorName", "DIN", "DirectorAddress", "Designation", "AppointmentDate" };
+
+        if (companyFields.Contains(key, StringComparer.OrdinalIgnoreCase))
+        {
+            return "Company";
+        }
+
+        if (directorFields.Contains(key, StringComparer.OrdinalIgnoreCase))
+        {
+            return "Director";
+        }
+
+        return null;
+    }
+
+    private static async Task<bool> DocumentTemplateTableExistsAsync(FirmPulseDbContext context)
+    {
+        var connection = context.Database.GetDbConnection();
+        var shouldClose = connection.State == System.Data.ConnectionState.Closed;
+
+        if (shouldClose)
+        {
+            await connection.OpenAsync();
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                select exists (
+                    select 1
+                    from information_schema.tables
+                    where table_schema = 'public'
+                      and table_name = 'DocumentTemplates'
+                )
+                """;
+
+            var result = await command.ExecuteScalarAsync();
+            return result is bool exists && exists;
+        }
+        finally
+        {
+            if (shouldClose)
+            {
+                await connection.CloseAsync();
             }
         }
     }

@@ -26,6 +26,12 @@ public class Director
     [MaxLength(20)]
     public string? Phone { get; set; }
 
+    [MaxLength(500)]
+    public string? Address { get; set; }
+
+    [MaxLength(100)]
+    public string? Designation { get; set; }
+
     [DataType(DataType.Date)]
     public DateOnly? AppointmentDate { get; set; }
 

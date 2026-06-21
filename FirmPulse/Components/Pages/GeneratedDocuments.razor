@@ -1,0 +1,132 @@
+@page "/generated-documents"
+@inject IDocumentGenerationService DocumentGenerationService
+@inject FirmPulseDbContext DbContext
+@inject NavigationManager NavigationManager
+
+<PageTitle>Generated Documents</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Document Drafting</p>
+        <h1>Generated Documents</h1>
+        <p class="text-muted mb-0">Download previous drafts or clone their saved placeholder values.</p>
+    </div>
+    <button class="btn btn-primary" @onclick="GenerateNew">Generate Document</button>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body border-bottom">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Company</label>
+                <InputSelect class="form-select" @bind-Value="filterCompanyId">
+                    <option value="0">All companies</option>
+                    @foreach (var company in companies)
+                    {
+                        <option value="@company.Id">@company.CompanyName</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Template</label>
+                <InputSelect class="form-select" @bind-Value="filterTemplateId">
+                    <option value="0">All templates</option>
+                    @foreach (var template in templates)
+                    {
+                        <option value="@template.Id">@template.TemplateName</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">From</label>
+                <InputDate class="form-control" @bind-Value="fromDate" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">To</label>
+                <InputDate class="form-control" @bind-Value="toDate" />
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        @if (isLoading)
+        {
+            <div class="p-4 text-muted">Loading generated documents...</div>
+        }
+        else if (FilteredDocuments.Count == 0)
+        {
+            <div class="p-4 text-muted">No generated documents found.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Document</th>
+                            <th>Company</th>
+                            <th>Template</th>
+                            <th>Generated</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var document in FilteredDocuments)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@document.DocumentTitle</div>
+                                    <div class="small text-muted">@document.GeneratedBy</div>
+                                </td>
+                                <td>@document.CompanyClient?.CompanyName</td>
+                                <td>@document.DocumentTemplate?.TemplateName</td>
+                                <td>@document.GeneratedAt.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt")</td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        @if (!string.IsNullOrWhiteSpace(document.WordFilePath))
+                                        {
+                                            <a class="btn btn-outline-secondary" href="@DownloadUrl(document.WordFilePath)" target="_blank">Download</a>
+                                        }
+                                        <button class="btn btn-outline-primary" @onclick="@(() => CloneDocument(document.Id))">Clone</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<GeneratedDocument> documents = [];
+    private List<CompanyClient> companies = [];
+    private List<DocumentTemplate> templates = [];
+    private bool isLoading = true;
+    private int filterCompanyId;
+    private int filterTemplateId;
+    private DateOnly? fromDate;
+    private DateOnly? toDate;
+
+    private List<GeneratedDocument> FilteredDocuments => documents
+        .Where(document => filterCompanyId == 0 || document.CompanyClientId == filterCompanyId)
+        .Where(document => filterTemplateId == 0 || document.DocumentTemplateId == filterTemplateId)
+        .Where(document => !fromDate.HasValue || DateOnly.FromDateTime(document.GeneratedAt.ToLocalTime()) >= fromDate.Value)
+        .Where(document => !toDate.HasValue || DateOnly.FromDateTime(document.GeneratedAt.ToLocalTime()) <= toDate.Value)
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        documents = await DocumentGenerationService.GetGeneratedDocumentsAsync();
+        companies = await DbContext.CompanyClients.Where(x => x.IsActive).OrderBy(x => x.CompanyName).ToListAsync();
+        templates = await DbContext.DocumentTemplates.OrderBy(x => x.TemplateName).ToListAsync();
+        isLoading = false;
+    }
+
+    private void GenerateNew() => NavigationManager.NavigateTo("/generate-document");
+
+    private void CloneDocument(int id) => NavigationManager.NavigateTo($"/generate-document?cloneDocumentId={id}");
+
+    private static string DownloadUrl(string? path) => string.IsNullOrWhiteSpace(path) ? "#" : "/" + path.TrimStart('/');
+}

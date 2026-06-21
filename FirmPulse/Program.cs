@@ -28,6 +28,8 @@ builder.Services.AddScoped<IFilingRecordService, FilingRecordService>();
 builder.Services.AddScoped<IWorkItemDocumentService, WorkItemDocumentService>();
 builder.Services.AddScoped<IClientFollowUpService, ClientFollowUpService>();
 builder.Services.AddScoped<ICompanyMeetingService, CompanyMeetingService>();
+builder.Services.AddScoped<IDocumentTemplateService, DocumentTemplateService>();
+builder.Services.AddScoped<IDocumentGenerationService, DocumentGenerationService>();
 
 var app = builder.Build();
 

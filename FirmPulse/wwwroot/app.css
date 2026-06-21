@@ -105,6 +105,10 @@ h1:focus {
     color: #6d7890;
 }
 
+.white-space-pre-wrap {
+    white-space: pre-wrap;
+}
+
 .card {
     border: 1px solid #dfe6f1;
     border-radius: 1.2rem;

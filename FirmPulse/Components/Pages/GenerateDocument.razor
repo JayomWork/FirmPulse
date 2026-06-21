@@ -1,0 +1,267 @@
+@page "/generate-document"
+@inject IDocumentGenerationService DocumentGenerationService
+@inject IDocumentTemplateService DocumentTemplateService
+@inject FirmPulseDbContext DbContext
+@inject NavigationManager NavigationManager
+
+<PageTitle>Generate Document</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Document Drafting</p>
+        <h1>Generate Document</h1>
+        <p class="text-muted mb-0">Select a company and template, fill any missing values, then save a Word draft.</p>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="alert alert-light border">Loading generator...</div>
+}
+else
+{
+    <div class="row g-4">
+        <div class="col-xl-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">Document Setup</h2></div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Company</label>
+                        <select class="form-select" value="@selectedCompanyId" @onchange="OnCompanyChangedAsync">
+                            <option value="0">Select company</option>
+                            @foreach (var company in companies)
+                            {
+                                <option value="@company.Id">@company.CompanyName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Template</label>
+                        <select class="form-select" value="@selectedTemplateId" @onchange="OnTemplateChangedAsync">
+                            <option value="0">Select template</option>
+                            @foreach (var template in templates)
+                            {
+                                <option value="@template.Id">@template.TemplateName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Director / Person</label>
+                        <select class="form-select" value="@selectedDirectorId" @onchange="OnDirectorChangedAsync" disabled="@(directors.Count == 0)">
+                            <option value="0">Manual / first active director</option>
+                            @foreach (var director in directors)
+                            {
+                                <option value="@director.Id">@director.FullName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Document Title</label>
+                        <InputText class="form-control" @bind-Value="documentTitle" />
+                    </div>
+                    <button class="btn btn-outline-primary w-100" @onclick="LoadFieldsAsync" disabled="@(!CanLoadFields)">Load Fields</button>
+                </div>
+            </div>
+
+            @if (savedDocument is not null)
+            {
+                <div class="alert alert-success mt-4">
+                    <div class="fw-semibold">Document saved.</div>
+                    @if (!string.IsNullOrWhiteSpace(savedDocument.WordFilePath))
+                    {
+                        <a class="alert-link" href="@DownloadUrl(savedDocument.WordFilePath)" target="_blank">Download Word document</a>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="col-xl-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">Placeholder Values</h2></div>
+                <div class="card-body">
+                    @if (fields.Count == 0)
+                    {
+                        <div class="text-muted">Choose a company and template to load placeholder fields.</div>
+                    }
+                    else
+                    {
+                        <div class="row g-3">
+                            @foreach (var field in fields)
+                            {
+                                <div class="col-md-6" @key="field.FieldKey">
+                                    <label class="form-label">
+                                        @field.FieldLabel
+                                        @if (field.IsAutoFilled)
+                                        {
+                                            <span class="badge bg-success-subtle text-success-emphasis ms-1">Auto</span>
+                                        }
+                                    </label>
+                                    <InputText class="form-control" @bind-Value="field.FieldValue" />
+                                </div>
+                            }
+                        </div>
+                        <div class="d-flex gap-2 mt-4">
+                            <button class="btn btn-outline-primary" @onclick="PreviewAsync">Preview</button>
+                            <button class="btn btn-primary" @onclick="GenerateAsync" disabled="@(!CanGenerate)">Save & Download Word</button>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">Preview</h2></div>
+                <div class="card-body">
+                    @if (string.IsNullOrWhiteSpace(previewContent))
+                    {
+                        <div class="text-muted">Preview will appear here.</div>
+                    }
+                    else
+                    {
+                        <pre class="mb-0 white-space-pre-wrap">@previewContent</pre>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "companyId")] public int? QueryCompanyId { get; set; }
+    [SupplyParameterFromQuery(Name = "templateId")] public int? QueryTemplateId { get; set; }
+    [SupplyParameterFromQuery(Name = "cloneDocumentId")] public int? CloneDocumentId { get; set; }
+
+    private List<CompanyClient> companies = [];
+    private List<DocumentTemplate> templates = [];
+    private List<Director> directors = [];
+    private List<DocumentGenerationFieldModel> fields = [];
+    private GeneratedDocument? savedDocument;
+    private bool isLoading = true;
+    private int selectedCompanyId;
+    private int selectedTemplateId;
+    private int selectedDirectorId;
+    private string documentTitle = string.Empty;
+    private string previewContent = string.Empty;
+
+    private bool CanLoadFields => selectedCompanyId > 0 && selectedTemplateId > 0;
+    private bool CanGenerate => CanLoadFields && fields.Count > 0 && !string.IsNullOrWhiteSpace(documentTitle);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        companies = await DbContext.CompanyClients.Where(x => x.IsActive).OrderBy(x => x.CompanyName).ToListAsync();
+        templates = await DocumentTemplateService.GetTemplatesAsync();
+
+        if (CloneDocumentId.HasValue)
+        {
+            await LoadCloneAsync(CloneDocumentId.Value);
+        }
+        else
+        {
+            selectedCompanyId = QueryCompanyId ?? selectedCompanyId;
+            selectedTemplateId = QueryTemplateId ?? selectedTemplateId;
+            await LoadDirectorsAsync();
+            if (CanLoadFields)
+            {
+                await LoadFieldsAsync();
+            }
+        }
+
+        isLoading = false;
+    }
+
+    private async Task LoadCloneAsync(int id)
+    {
+        var document = await DocumentGenerationService.GetGeneratedDocumentByIdAsync(id);
+        if (document is null)
+        {
+            return;
+        }
+
+        selectedCompanyId = document.CompanyClientId;
+        selectedTemplateId = document.DocumentTemplateId;
+        documentTitle = $"{document.DocumentTitle} Copy";
+        await LoadDirectorsAsync();
+        fields = await DocumentGenerationService.GetGenerationFieldsAsync(selectedCompanyId, selectedTemplateId, selectedDirectorId == 0 ? null : selectedDirectorId);
+
+        foreach (var oldValue in document.Values)
+        {
+            var field = fields.FirstOrDefault(x => x.FieldKey.Equals(oldValue.FieldKey, StringComparison.OrdinalIgnoreCase));
+            if (field is not null)
+            {
+                field.FieldValue = oldValue.FieldValue;
+                field.IsAutoFilled = false;
+            }
+        }
+
+        await PreviewAsync();
+    }
+
+    private async Task OnCompanyChangedAsync(ChangeEventArgs args)
+    {
+        selectedCompanyId = ParseInt(args.Value);
+        selectedDirectorId = 0;
+        await LoadDirectorsAsync();
+        await LoadFieldsIfReadyAsync();
+    }
+
+    private async Task OnTemplateChangedAsync(ChangeEventArgs args)
+    {
+        selectedTemplateId = ParseInt(args.Value);
+        var template = templates.FirstOrDefault(x => x.Id == selectedTemplateId);
+        if (template is not null && string.IsNullOrWhiteSpace(documentTitle))
+        {
+            documentTitle = template.TemplateName;
+        }
+        await LoadFieldsIfReadyAsync();
+    }
+
+    private async Task OnDirectorChangedAsync(ChangeEventArgs args)
+    {
+        selectedDirectorId = ParseInt(args.Value);
+        await LoadFieldsIfReadyAsync();
+    }
+
+    private async Task LoadDirectorsAsync()
+    {
+        directors = selectedCompanyId == 0
+            ? []
+            : await DbContext.Directors
+                .Where(x => x.CompanyClientId == selectedCompanyId && x.IsActive)
+                .OrderBy(x => x.FullName)
+                .ToListAsync();
+    }
+
+    private async Task LoadFieldsIfReadyAsync()
+    {
+        if (CanLoadFields)
+        {
+            await LoadFieldsAsync();
+        }
+    }
+
+    private async Task LoadFieldsAsync()
+    {
+        fields = await DocumentGenerationService.GetGenerationFieldsAsync(selectedCompanyId, selectedTemplateId, selectedDirectorId == 0 ? null : selectedDirectorId);
+        savedDocument = null;
+        await PreviewAsync();
+    }
+
+    private async Task PreviewAsync()
+    {
+        previewContent = CanLoadFields
+            ? await DocumentGenerationService.PreviewDocumentAsync(selectedTemplateId, fields)
+            : string.Empty;
+    }
+
+    private async Task GenerateAsync()
+    {
+        await PreviewAsync();
+        savedDocument = await DocumentGenerationService.GenerateDocumentAsync(selectedCompanyId, selectedTemplateId, documentTitle, fields, "CS User");
+    }
+
+    private void OpenHistory() => NavigationManager.NavigateTo("/generated-documents");
+
+    private static int ParseInt(object? value) => int.TryParse(value?.ToString(), out var result) ? result : 0;
+
+    private static string DownloadUrl(string? path) => string.IsNullOrWhiteSpace(path) ? "#" : "/" + path.TrimStart('/');
+}

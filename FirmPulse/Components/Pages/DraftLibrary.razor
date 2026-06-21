@@ -1,0 +1,144 @@
+@page "/draft-library"
+@inject IDocumentTemplateService DocumentTemplateService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Draft Library</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Document Drafting</p>
+        <h1>Draft Library</h1>
+        <p class="text-muted mb-0">Manage reusable resolution, notice, consent, and filing draft templates.</p>
+    </div>
+    <button class="btn btn-primary" @onclick="CreateTemplate">Add Template</button>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body border-bottom">
+        <div class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label">Search</label>
+                <InputText class="form-control" @bind-Value="searchTerm" placeholder="Search by name or description" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Category</label>
+                <InputText class="form-control" @bind-Value="categoryTerm" placeholder="Filter by category" />
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <div class="form-check">
+                    <InputCheckbox class="form-check-input" @bind-Value="showInactive" @bind-Value:after="LoadTemplatesAsync" />
+                    <label class="form-check-label ms-2">Show inactive</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        @if (isLoading)
+        {
+            <div class="p-4 text-muted">Loading draft templates...</div>
+        }
+        else if (FilteredTemplates.Count == 0)
+        {
+            <div class="p-4 text-muted">No draft templates found.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Template</th>
+                            <th>Category</th>
+                            <th>Placeholders</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var template in FilteredTemplates)
+                        {
+                            var placeholders = DocumentTemplateService.ExtractPlaceholders(template.TemplateContent);
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@template.TemplateName</div>
+                                    <div class="small text-muted">@template.Description</div>
+                                </td>
+                                <td>@template.TemplateCategory</td>
+                                <td>
+                                    @if (placeholders.Count == 0)
+                                    {
+                                        <span class="text-muted">None</span>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var placeholder in placeholders)
+                                        {
+                                            <span class="badge bg-light text-dark border me-1 mb-1">@placeholder</span>
+                                        }
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @(template.IsActive ? "bg-success-subtle text-success-emphasis" : "bg-secondary-subtle text-secondary-emphasis")">
+                                        @(template.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" @onclick="@(() => EditTemplate(template.Id))">Edit</button>
+                                        <button class="btn btn-outline-secondary" @onclick="@(() => GenerateFromTemplate(template.Id))">Generate</button>
+                                        @if (template.IsActive)
+                                        {
+                                            <button class="btn btn-outline-danger" @onclick="@(() => DeleteTemplateAsync(template.Id))">Deactivate</button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<DocumentTemplate> templates = [];
+    private bool isLoading = true;
+    private bool showInactive;
+    private string searchTerm = string.Empty;
+    private string categoryTerm = string.Empty;
+
+    private List<DocumentTemplate> FilteredTemplates => templates
+        .Where(template =>
+            string.IsNullOrWhiteSpace(searchTerm) ||
+            template.TemplateName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+            (template.Description?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false))
+        .Where(template =>
+            string.IsNullOrWhiteSpace(categoryTerm) ||
+            template.TemplateCategory.Contains(categoryTerm, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTemplatesAsync();
+    }
+
+    private async Task LoadTemplatesAsync()
+    {
+        isLoading = true;
+        templates = await DocumentTemplateService.GetTemplatesAsync(showInactive);
+        isLoading = false;
+    }
+
+    private void CreateTemplate() => NavigationManager.NavigateTo("/draft-templates/create");
+
+    private void EditTemplate(int id) => NavigationManager.NavigateTo($"/draft-templates/edit/{id}");
+
+    private void GenerateFromTemplate(int id) => NavigationManager.NavigateTo($"/generate-document?templateId={id}");
+
+    private async Task DeleteTemplateAsync(int id)
+    {
+        await DocumentTemplateService.DeleteTemplateAsync(id);
+        await LoadTemplatesAsync();
+    }
+}
